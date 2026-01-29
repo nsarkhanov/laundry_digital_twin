@@ -1,0 +1,40 @@
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,,,,,,,,,
+,,Hopr,,,,,,,,
+,1 Phase,,ML,FL,Praga,Jaltskaja,Masarika,Anmut,Riga,Tallin
+,,All cleaning is carried out and planned only in Hopr,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE
+,,Hskp finds out about work through Hopr,TRUE,TRUE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE
+,,"All notes and queries (number of people, crib) hskp
+views through Hopr, without using Mews",TRUE,TRUE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE
+,,"Everyone understands the standard for using time tracking (how and why it's necessary).
+Don't forget to press start and stop!",TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE
+,,Reports of found items are made within Hopr,TRUE,FALSE,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE
+,,Laundry Hours via Hopr,TRUE,TRUE,TRUE,FALSE,TRUE,FALSE,,TRUE
+,,Record stolen and broken items through the app,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
+"1. Train everyone to use the app 100%, remove chats",2 Phase,,,,,,,,,
+2. Automate your schedule (hour tracking) with the app,,The manager (regional) trusts the status information 100%,TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE
+"3. Automate statistics collection - speed, linen",,"The care service relies on data from Hopr (lost items, apartment readiness)",TRUE,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE
+4. Automate inventory,,"Doesn't use chats (Viber, Telegram, WhatsApp).
+Work chat: Slack is only for breakdowns and unusual situations.",TRUE,TRUE,FALSE,FALSE,FALSE,FALSE,TRUE,TRUE
+,,"The file (cleaning scheduling) has been deleted.
+(Full cleanings are only recorded for corporate guests)",TRUE,TRUE,TRUE,FALSE,FALSE,FALSE,TRUE,TRUE
+,,Laundry statistics are recorded in Hopr,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
+,,Changing the status from normal cleaning to dirty or corp (sazvon s Hopr),FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
+,,,,,,,,,,
+,3 Phase,,,,,,,,,
+,,Remote cleaning planning,,,,,,,,
+,,Tasks are transferred to the master from Hopr automatically,,,,,,,,
+,,Automate your schedule (hour tracking) with the app,,,,,,,,
+,,"Automate statistics collection - speed, linen",,,,,,,,
+,,"Automate inventory
+(As soon as a broken glass is recorded in an apartment, for example,
+it is subtracted from the total inventory in the property)",,,,,,,,
+,,Problems and tasks are assigned to technicians through Hopr,,,,,,,,

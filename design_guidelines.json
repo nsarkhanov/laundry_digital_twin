@@ -1,0 +1,139 @@
+{
+  "identity": {
+    "name": "E1",
+    "role": "The Anti-AI Designer",
+    "mission": "Create a 'Laundry Digital Twin' dashboard that feels like a Cyber-Industrial Command Center. Reject generic SaaS aesthetics.",
+    "principles": [
+      "Fusion over Imitation: Mix Industrial precision with Cyberpunk aesthetics.",
+      "Emotion First: The user should feel in control and powerful.",
+      "Content is King: Data is the hero. Visualize it boldly.",
+      "Zoom In: Use macro textures for chemicals/machines.",
+      "Negative Space: Don't clutter. Use the Bento grid wisely."
+    ]
+  },
+  "typography": {
+    "headings": {
+      "family": "Outfit, sans-serif",
+      "weights": ["400", "600", "700"],
+      "usage": "All headings (h1-h6). Use tight tracking (-0.02em)."
+    },
+    "body": {
+      "family": "DM Sans, sans-serif",
+      "weights": ["400", "500"],
+      "usage": "All body text, data tables, inputs."
+    },
+    "mono": {
+      "family": "JetBrains Mono, monospace",
+      "usage": "Code snippets, specific data values (IDs, hashes)."
+    },
+    "installation": "Import fonts via Google Fonts in index.css: @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400&display=swap');"
+  },
+  "colors": {
+    "theme": "dark",
+    "background": {
+      "default": "#121212",
+      "paper": "#18181b",
+      "subtle": "#27272a"
+    },
+    "primary": {
+      "main": "#06b6d4",
+      "light": "#67e8f9",
+      "dark": "#0891b2",
+      "description": "Cyan/Teal for Water & Electricity (Utilities)"
+    },
+    "secondary": {
+      "main": "#8b5cf6",
+      "light": "#a78bfa",
+      "dark": "#7c3aed",
+      "description": "Purple for Chemicals"
+    },
+    "accent": {
+      "main": "#f59e0b",
+      "light": "#fbbf24",
+      "dark": "#d97706",
+      "description": "Amber for Labor & Alerts"
+    },
+    "success": "#10b981",
+    "error": "#f43f5e",
+    "text": {
+      "primary": "#ffffff",
+      "secondary": "#a1a1aa",
+      "muted": "#52525b"
+    },
+    "glass": {
+      "panel": "bg-white/5 backdrop-blur-xl border-white/10",
+      "panel_hover": "hover:bg-white/10 transition-all duration-300",
+      "input": "bg-black/20 border-white/10 focus:border-primary/50"
+    }
+  },
+  "layout": {
+    "grid_system": "Bento Grid Mode B (High Density)",
+    "container": "max-w-[1600px] mx-auto p-6 md:p-8 lg:p-12",
+    "spacing": {
+      "section_gap": "gap-6",
+      "internal_padding": "p-6"
+    },
+    "z_index": {
+      "glass_overlay": 10,
+      "dropdown": 50,
+      "modal": 100
+    }
+  },
+  "components": {
+    "cards": {
+      "style": "glass",
+      "classes": "rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl",
+      "hover": "hover:border-white/20 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
+    },
+    "buttons": {
+      "primary": "bg-primary text-black font-bold hover:bg-primary/90 rounded-full px-8 py-6 shadow-[0_0_20px_rgba(6,182,212,0.3)]",
+      "secondary": "bg-white/10 text-white hover:bg-white/20 border border-white/10 rounded-full px-6 py-4",
+      "ghost": "hover:bg-white/5 text-gray-300 hover:text-white"
+    },
+    "inputs": {
+      "style": "flat_glass",
+      "classes": "bg-black/20 border-white/10 text-white placeholder:text-gray-600 focus:ring-1 focus:ring-primary/50 rounded-lg h-12"
+    },
+    "charts": {
+      "library": "Recharts",
+      "theme": {
+        "background": "transparent",
+        "text": "#a1a1aa",
+        "grid": "#27272a",
+        "tooltip": {
+          "bg": "#18181b",
+          "border": "#27272a"
+        }
+      }
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "Use 'backdrop-blur-xl' heavily. Ensure text contrast is high (white on glass).",
+    "borders": "Use 1px borders with low opacity (border-white/10) to define edges without harsh lines.",
+    "shadows": "Use colored shadows for primary actions (shadow-cyan-500/20).",
+    "gradients": "Avoid full-screen gradients. Use subtle radial gradients in the background to create 'glow' spots behind glass cards."
+  },
+  "images": {
+    "washing_machine_hero": {
+      "url": "https://images.unsplash.com/photo-1637567855320-429633e50bbe?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTJ8MHwxfHNlYXJjaHwxfHxpbmR1c3RyaWFsJTIwd2FzaGluZyUyMG1hY2hpbmUlMjBtb2Rlcm4lMjBkYXJrJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3Njk2MTIxNzl8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Industrial Washing Machine Close-up",
+      "usage": "Hero section or Machine Configuration card background (with overlay)"
+    },
+    "chemical_texture": {
+      "url": "https://images.pexels.com/photos/5591576/pexels-photo-5591576.jpeg",
+      "alt": "White Powder Texture",
+      "usage": "Chemicals section background or thumbnail"
+    }
+  },
+  "universal_guidelines": [
+    "DO NOT use 'Inter' for headings. Use 'Outfit'.",
+    "DO NOT use purple or teal for CTAs unless it matches the specific utility context (Water/Chem).",
+    "DO NOT center everything. Use asymmetry.",
+    "Ensure all interactive elements have 'data-testid'.",
+    "Use 'sonner' for toasts.",
+    "Use 'lucide-react' for icons.",
+    "Dark mode is mandatory. No light mode toggle needed for this specific 'Command Center' vibe.",
+    "Use 'p-6' or 'p-8' for internal card padding. Don't cram content."
+  ],
+  "instructions_to_main_agent": "1. Install fonts first. 2. Update tailwind.config.js with the new colors and font families. 3. Create a 'Layout' component that handles the background and main grid. 4. Build the 'CostCalculator' as the central engine. 5. Use Recharts for the 'Cost Breakdown' and 'Impact Analysis'. 6. Ensure the 'Cost per Kg' is the most prominent number on the screen (Hero Metric)."
+}
