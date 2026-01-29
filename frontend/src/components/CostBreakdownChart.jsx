@@ -13,9 +13,8 @@ export default function CostBreakdownChart({ data, currencySymbol }) {
     return (
       <div className="h-64 flex items-center justify-center text-gray-500">
         <div className="text-center">
-          <div className="text-4xl mb-2 opacity-30">📊</div>
-          <p>No cost data available</p>
-          <p className="text-sm">Adjust settings to see breakdown</p>
+          <p>No cost data generated yet</p>
+          <p className="text-xs mt-2">Adjust settings to see breakdown</p>
         </div>
       </div>
     );
@@ -28,86 +27,77 @@ export default function CostBreakdownChart({ data, currencySymbol }) {
     { name: 'Labor', value: data.labor_cost_per_kg, color: COLORS.labor }
   ].filter(item => item.value > 0);
 
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const item = payload[0];
-      const percentage = ((item.value / data.cost_per_kg) * 100).toFixed(1);
-      return (
-        <div className="bg-[#18181b] border border-white/10 rounded-lg p-3 shadow-xl">
-          <div className="flex items-center gap-2 mb-1">
-            <div 
-              className="w-3 h-3 rounded-full" 
-              style={{ backgroundColor: item.payload.color }}
-            />
-            <span className="font-medium text-white">{item.name}</span>
-          </div>
-          <div className="text-lg font-bold text-white">
-            {currencySymbol}{item.value.toFixed(4)}/kg
-          </div>
-          <div className="text-sm text-gray-400">
-            {percentage}% of total
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
+  // Calculate percentages
+  const total = chartData.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <div className="relative">
-      <ResponsiveContainer width="100%" height={280}>
-        <PieChart>
-          <Pie
-            data={chartData}
-            cx="50%"
-            cy="50%"
-            innerRadius={70}
-            outerRadius={100}
-            paddingAngle={3}
-            dataKey="value"
-            stroke="none"
-          >
-            {chartData.map((entry, index) => (
-              <Cell 
-                key={`cell-${index}`} 
-                fill={entry.color}
-                className="transition-all duration-300 hover:opacity-80"
+    <div className="flex flex-col md:flex-row items-center h-64">
+      {/* Legend Left - Single Column */}
+      <div className="w-full md:w-1/3 space-y-3 pr-4">
+        {chartData.map((entry, index) => (
+          <div key={`legend-${index}`} className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: entry.color }}
               />
-            ))}
-          </Pie>
-          <Tooltip content={<CustomTooltip />} />
-        </PieChart>
-      </ResponsiveContainer>
-
-      {/* Center text */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="text-center">
-          <div className="text-3xl font-heading font-bold text-white">
-            {currencySymbol}{data.cost_per_kg.toFixed(2)}
-          </div>
-          <div className="text-sm text-gray-500">per kg</div>
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="grid grid-cols-2 gap-3 mt-4">
-        {chartData.map((item) => {
-          const percentage = ((item.value / data.cost_per_kg) * 100).toFixed(1);
-          return (
-            <div key={item.name} className="flex items-center gap-2">
-              <div 
-                className="w-3 h-3 rounded-full flex-shrink-0" 
-                style={{ backgroundColor: item.color }}
-              />
-              <div className="min-w-0">
-                <div className="text-sm text-gray-400 truncate">{item.name}</div>
-                <div className="text-sm font-medium text-white">
-                  {currencySymbol}{item.value.toFixed(4)}/kg
-                </div>
+              <span className="text-sm text-gray-300">{entry.name}</span>
+            </div>
+            <div className="text-right">
+              <div className="text-sm font-medium text-white">
+                {currencySymbol}{entry.value.toFixed(3)}
+              </div>
+              <div className="text-xs text-gray-500">
+                {((entry.value / total) * 100).toFixed(1)}%
               </div>
             </div>
-          );
-        })}
+          </div>
+        ))}
+      </div>
+
+      {/* Chart Right - Bigger */}
+      <div className="w-full md:w-2/3 h-full relative">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={90} // Increased size
+              paddingAngle={5}
+              dataKey="value"
+              stroke="none"
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  return (
+                    <div className="custom-tooltip">
+                      <p className="font-medium text-white mb-1">{payload[0].name}</p>
+                      <p className="text-cyan text-sm">
+                        {currencySymbol}{payload[0].value.toFixed(4)}/kg
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+
+        {/* Center Text */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+          <div className="text-xs text-gray-500">Total</div>
+          <div className="text-lg font-bold text-white">
+            {currencySymbol}{data.cost_per_kg.toFixed(2)}
+          </div>
+        </div>
       </div>
     </div>
   );

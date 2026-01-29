@@ -18,29 +18,29 @@ export default function CostImpactChart({ data, currencySymbol }) {
   }
 
   const chartData = [
-    { 
-      name: 'Electricity', 
+    {
+      name: 'Electricity',
       value: (data.electricity_cost_per_kg / data.cost_per_kg) * 100,
       absoluteValue: data.electricity_cost_per_kg,
-      color: COLORS.electricity 
+      color: COLORS.electricity
     },
-    { 
-      name: 'Water', 
+    {
+      name: 'Water',
       value: (data.water_cost_per_kg / data.cost_per_kg) * 100,
       absoluteValue: data.water_cost_per_kg,
-      color: COLORS.water 
+      color: COLORS.water
     },
-    { 
-      name: 'Chemicals', 
+    {
+      name: 'Chemicals',
       value: (data.chemical_cost_per_kg / data.cost_per_kg) * 100,
       absoluteValue: data.chemical_cost_per_kg,
-      color: COLORS.chemicals 
+      color: COLORS.chemicals
     },
-    { 
-      name: 'Labor', 
+    {
+      name: 'Labor',
       value: (data.labor_cost_per_kg / data.cost_per_kg) * 100,
       absoluteValue: data.labor_cost_per_kg,
-      color: COLORS.labor 
+      color: COLORS.labor
     }
   ].sort((a, b) => b.value - a.value);
 
@@ -50,8 +50,8 @@ export default function CostImpactChart({ data, currencySymbol }) {
       return (
         <div className="bg-[#18181b] border border-white/10 rounded-lg p-3 shadow-xl">
           <div className="flex items-center gap-2 mb-1">
-            <div 
-              className="w-3 h-3 rounded-full" 
+            <div
+              className="w-3 h-3 rounded-full"
               style={{ backgroundColor: item.color }}
             />
             <span className="font-medium text-white">{item.name}</span>
@@ -70,37 +70,37 @@ export default function CostImpactChart({ data, currencySymbol }) {
 
   return (
     <div>
-      <ResponsiveContainer width="100%" height={200}>
-        <BarChart 
-          data={chartData} 
+      <ResponsiveContainer width="100%" height={120}>
+        <BarChart
+          data={chartData}
           layout="vertical"
-          margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
+          margin={{ top: 0, right: 30, left: 60, bottom: 0 }}
         >
-          <XAxis 
-            type="number" 
+          <XAxis
+            type="number"
             domain={[0, 100]}
-            tick={{ fill: '#a1a1aa', fontSize: 12 }}
+            tick={{ fill: '#a1a1aa', fontSize: 10 }}
             axisLine={{ stroke: '#27272a' }}
             tickLine={{ stroke: '#27272a' }}
             tickFormatter={(value) => `${value}%`}
           />
-          <YAxis 
-            type="category" 
+          <YAxis
+            type="category"
             dataKey="name"
-            tick={{ fill: '#a1a1aa', fontSize: 12 }}
+            tick={{ fill: '#a1a1aa', fontSize: 10 }}
             axisLine={{ stroke: '#27272a' }}
             tickLine={false}
-            width={70}
+            width={55}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-          <Bar 
-            dataKey="value" 
-            radius={[0, 4, 4, 0]}
-            barSize={24}
+          <Bar
+            dataKey="value"
+            radius={[0, 3, 3, 0]}
+            barSize={12}
           >
             {chartData.map((entry, index) => (
-              <Cell 
-                key={`cell-${index}`} 
+              <Cell
+                key={`cell-${index}`}
                 fill={entry.color}
                 className="transition-all duration-300"
               />
@@ -110,7 +110,7 @@ export default function CostImpactChart({ data, currencySymbol }) {
       </ResponsiveContainer>
 
       {/* Percentage markers */}
-      <div className="flex justify-between text-xs text-gray-600 mt-2 px-20">
+      <div className="flex justify-between text-[10px] text-gray-600 mt-1 px-16">
         <span>0%</span>
         <span>25%</span>
         <span>50%</span>

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { 
-  Zap, Droplets, FlaskConical, Clock, Settings, 
-  RotateCcw, Save, Plus, Trash2, WashingMachine, 
+import {
+  Zap, Droplets, FlaskConical, Clock, Settings,
+  RotateCcw, Save, Plus, Trash2, WashingMachine,
   Wind, MapPin, ChevronDown
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -49,40 +49,44 @@ const defaultConfig = {
   tariffMode: 'standard',
   locationId: null,
   washingMachineId: null,
-  ironingMachineId: null,
+  dryingMachineId: null,
   cyclesPerMonth: 200,
-  batchWeightKg: 8,
-  ironingPercentage: 60,
-  ironingTimePerKgMin: 5
+  loadPercentage: 80.0
 };
 
 export default function LaundryDashboard() {
   const [config, setConfig] = useState(defaultConfig);
+  const [timeFrame, setTimeFrame] = useState('month');
   const [costData, setCostData] = useState(null);
   const [locations, setLocations] = useState([]);
   const [washingMachines, setWashingMachines] = useState([]);
+  const [dryingMachines, setDryingMachines] = useState([]); // Changed from ironingMachines
   const [ironingMachines, setIroningMachines] = useState([]);
   const [chemicals, setChemicals] = useState([]);
   const [selectedChemicals, setSelectedChemicals] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Dialog states
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [showWashingMachineDialog, setShowWashingMachineDialog] = useState(false);
+  const [showDryingMachineDialog, setShowDryingMachineDialog] = useState(false); // Changed
   const [showIroningMachineDialog, setShowIroningMachineDialog] = useState(false);
   const [showChemicalDialog, setShowChemicalDialog] = useState(false);
-  
+
   // Form states
   const [newLocation, setNewLocation] = useState('');
   const [newWashingMachine, setNewWashingMachine] = useState({
-    model: '', capacity_kg: 8, water_consumption_l: 50, 
+    model: '', capacity_kg: 8, water_consumption_l: 50,
     energy_consumption_kwh: 1.5, cycle_duration_min: 60
   });
+  const [newDryingMachine, setNewDryingMachine] = useState({ // Changed
+    model: '', energy_consumption_kwh_per_cycle: 2.0
+  });
   const [newIroningMachine, setNewIroningMachine] = useState({
-    model: '', energy_consumption_kwh_per_hour: 2.0
+    model: '', energy_consumption_kwh_per_hour: 3.0
   });
   const [newChemical, setNewChemical] = useState({
-    name: '', type: 'washing_powder', package_price: 10, 
+    name: '', type: 'washing_powder', package_price: 10,
     package_weight_g: 1000, usage_per_cycle_g: 50
   });
 
@@ -94,27 +98,50 @@ export default function LaundryDashboard() {
   }, []);
 
   // Calculate costs whenever config changes
+  const calculateCosts = useCallback(async () => {
+    try {
+      const response = await axios.post(`${API}/calculate-cost`, {
+        currency: config.currency,
+        electricity_rate: config.electricityRate,
+        water_rate: config.waterRate,
+        labor_rate: config.laborRate,
+        season: config.season,
+        tariff_mode: config.tariffMode,
+        cycles_per_month: config.cyclesPerMonth,
+        load_percentage: config.loadPercentage,
+        washing_machine_id: config.washingMachineId,
+        drying_machine_id: config.dryingMachineId,
+        chemical_ids: selectedChemicals
+      });
+      setCostData(response.data);
+    } catch (error) {
+      console.error('Cost calculation error:', error);
+    }
+  }, [config, selectedChemicals]);
+
   useEffect(() => {
     if (!isLoading) {
       calculateCosts();
     }
-  }, [config, selectedChemicals, isLoading]);
+  }, [config, selectedChemicals, isLoading, calculateCosts]);
 
   const fetchAllData = async () => {
     setIsLoading(true);
     try {
-      const [locRes, washRes, ironRes, chemRes] = await Promise.all([
+      const [locRes, washRes, dryRes, ironRes, chemRes] = await Promise.all([
         axios.get(`${API}/locations`),
         axios.get(`${API}/washing-machines`),
+        axios.get(`${API}/drying-machines`),
         axios.get(`${API}/ironing-machines`),
         axios.get(`${API}/chemicals`)
       ]);
-      
+
       setLocations(locRes.data);
       setWashingMachines(washRes.data);
+      setDryingMachines(dryRes.data);
       setIroningMachines(ironRes.data);
       setChemicals(chemRes.data);
-      
+
       // Try to load latest configuration
       try {
         const configRes = await axios.get(`${API}/configurations/latest`);
@@ -128,11 +155,9 @@ export default function LaundryDashboard() {
             tariffMode: configRes.data.tariff_mode,
             locationId: configRes.data.location_id,
             washingMachineId: configRes.data.washing_machine_id,
-            ironingMachineId: configRes.data.ironing_machine_id,
+            dryingMachineId: configRes.data.drying_machine_id,
             cyclesPerMonth: configRes.data.cycles_per_month,
-            batchWeightKg: configRes.data.batch_weight_kg,
-            ironingPercentage: configRes.data.ironing_percentage,
-            ironingTimePerKgMin: configRes.data.ironing_time_per_kg_min
+            loadPercentage: configRes.data.load_percentage,
           });
         }
       } catch {
@@ -145,29 +170,6 @@ export default function LaundryDashboard() {
       setIsLoading(false);
     }
   };
-
-  const calculateCosts = useCallback(async () => {
-    try {
-      const response = await axios.post(`${API}/calculate-cost`, {
-        currency: config.currency,
-        electricity_rate: config.electricityRate,
-        water_rate: config.waterRate,
-        labor_rate: config.laborRate,
-        season: config.season,
-        tariff_mode: config.tariffMode,
-        cycles_per_month: config.cyclesPerMonth,
-        batch_weight_kg: config.batchWeightKg,
-        ironing_percentage: config.ironingPercentage,
-        ironing_time_per_kg_min: config.ironingTimePerKgMin,
-        washing_machine_id: config.washingMachineId,
-        ironing_machine_id: config.ironingMachineId,
-        chemical_ids: selectedChemicals
-      });
-      setCostData(response.data);
-    } catch (error) {
-      console.error('Cost calculation error:', error);
-    }
-  }, [config, selectedChemicals]);
 
   const saveConfiguration = async () => {
     try {
@@ -255,12 +257,38 @@ export default function LaundryDashboard() {
     }
   };
 
+  const addDryingMachine = async () => {
+    if (!newDryingMachine.model.trim()) return;
+    try {
+      const res = await axios.post(`${API}/drying-machines`, newDryingMachine);
+      setDryingMachines([...dryingMachines, res.data]);
+      setNewDryingMachine({ model: '', energy_consumption_kwh_per_cycle: 2.0 });
+      setShowDryingMachineDialog(false);
+      toast.success('Drying machine added');
+    } catch {
+      toast.error('Failed to add drying machine');
+    }
+  };
+
+  const deleteDryingMachine = async (id) => {
+    try {
+      await axios.delete(`${API}/drying-machines/${id}`);
+      setDryingMachines(dryingMachines.filter(m => m.id !== id));
+      if (config.dryingMachineId === id) {
+        setConfig(prev => ({ ...prev, dryingMachineId: null }));
+      }
+      toast.success('Drying machine deleted');
+    } catch {
+      toast.error('Failed to delete drying machine');
+    }
+  };
+
   const addIroningMachine = async () => {
     if (!newIroningMachine.model.trim()) return;
     try {
       const res = await axios.post(`${API}/ironing-machines`, newIroningMachine);
       setIroningMachines([...ironingMachines, res.data]);
-      setNewIroningMachine({ model: '', energy_consumption_kwh_per_hour: 2.0 });
+      setNewIroningMachine({ model: '', energy_consumption_kwh_per_hour: 3.0 });
       setShowIroningMachineDialog(false);
       toast.success('Ironing machine added');
     } catch {
@@ -272,9 +300,6 @@ export default function LaundryDashboard() {
     try {
       await axios.delete(`${API}/ironing-machines/${id}`);
       setIroningMachines(ironingMachines.filter(m => m.id !== id));
-      if (config.ironingMachineId === id) {
-        setConfig(prev => ({ ...prev, ironingMachineId: null }));
-      }
       toast.success('Ironing machine deleted');
     } catch {
       toast.error('Failed to delete ironing machine');
@@ -309,7 +334,7 @@ export default function LaundryDashboard() {
   };
 
   const toggleChemical = (id) => {
-    setSelectedChemicals(prev => 
+    setSelectedChemicals(prev =>
       prev.includes(id) ? prev.filter(cid => cid !== id) : [...prev, id]
     );
   };
@@ -353,7 +378,8 @@ export default function LaundryDashboard() {
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column - Hero Metric & Stats */}
-        <div className="lg:col-span-7 space-y-6">
+        {/* Left Column - Hero Metric & Stats */}
+        <div className="lg:col-span-7 flex flex-col gap-6">
           {/* Hero Cost Card */}
           <div className="glass-card p-6 md:p-8">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
@@ -380,120 +406,103 @@ export default function LaundryDashboard() {
                   Real-time calculation based on your inputs
                 </p>
               </div>
-              
-              {/* Cost Distribution Bar */}
-              <div className="flex-1 max-w-md">
-                <div className="text-sm text-gray-400 mb-3 uppercase tracking-wider">Cost Distribution</div>
-                <div className="flex items-center gap-2 text-xs text-gray-400 mb-2 flex-wrap">
-                  <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-cyan"></span>
-                    Electricity {currencySymbol}{costData?.electricity_cost_per_kg?.toFixed(3) || '0'}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                    Water {currencySymbol}{costData?.water_cost_per_kg?.toFixed(3) || '0'}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-purple"></span>
-                    Chemicals {currencySymbol}{costData?.chemical_cost_per_kg?.toFixed(3) || '0'}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-amber"></span>
-                    Labor {currencySymbol}{costData?.labor_cost_per_kg?.toFixed(3) || '0'}
-                  </span>
-                </div>
-                <div className="h-4 rounded-full overflow-hidden bg-white/5 flex">
-                  {costData && costData.cost_per_kg > 0 && (
-                    <>
-                      <div 
-                        className="h-full bg-cyan transition-all duration-500"
-                        style={{ width: `${(costData.electricity_cost_per_kg / costData.cost_per_kg) * 100}%` }}
-                      />
-                      <div 
-                        className="h-full bg-blue-500 transition-all duration-500"
-                        style={{ width: `${(costData.water_cost_per_kg / costData.cost_per_kg) * 100}%` }}
-                      />
-                      <div 
-                        className="h-full bg-purple transition-all duration-500"
-                        style={{ width: `${(costData.chemical_cost_per_kg / costData.cost_per_kg) * 100}%` }}
-                      />
-                      <div 
-                        className="h-full bg-amber transition-all duration-500"
-                        style={{ width: `${(costData.labor_cost_per_kg / costData.cost_per_kg) * 100}%` }}
-                      />
-                    </>
-                  )}
-                </div>
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>Electricity & Water</span>
-                  <span>Chemicals & Labor</span>
-                </div>
-              </div>
+            </div>
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>Electricity & Water</span>
+              <span>Chemicals & Labor</span>
+            </div>
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>Electricity & Water</span>
+              <span>Chemicals & Labor</span>
             </div>
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard 
-              icon={<Zap className="w-5 h-5" />}
-              iconColor="text-yellow-400"
-              bgColor="bg-yellow-400/10"
-              label="Monthly Electricity"
-              value={costData?.monthly_electricity_kwh?.toFixed(0) || '0'}
-              unit="kWh"
-              subValue={`${currencySymbol}${costData?.monthly_electricity_cost?.toFixed(2) || '0'}`}
-            />
-            <StatCard 
-              icon={<Droplets className="w-5 h-5" />}
-              iconColor="text-blue-400"
-              bgColor="bg-blue-400/10"
-              label="Monthly Water"
-              value={costData?.monthly_water_m3?.toFixed(1) || '0'}
-              unit="m³"
-              subValue={`${currencySymbol}${costData?.monthly_water_cost?.toFixed(2) || '0'}`}
-            />
-            <StatCard 
-              icon={<FlaskConical className="w-5 h-5" />}
-              iconColor="text-purple"
-              bgColor="bg-purple/10"
-              label="Monthly Chemicals"
-              value={`${currencySymbol}${costData?.monthly_chemical_cost?.toFixed(2) || '0'}`}
-              unit=""
-              subValue={`${selectedChemicals.length} chemicals`}
-            />
-            <StatCard 
-              icon={<Clock className="w-5 h-5" />}
-              iconColor="text-amber"
-              bgColor="bg-amber/10"
-              label="Labor Hours"
-              value={costData?.monthly_labor_hours?.toFixed(0) || '0'}
-              unit="hrs"
-              subValue={`${currencySymbol}${costData?.monthly_labor_cost?.toFixed(2) || '0'}`}
-            />
+          <div className="glass-card px-4 pt-4 pb-2 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              {/* Time Frame Selector Tabs */}
+              <div className="inline-flex bg-white/5 p-1 rounded-lg">
+                {['week', 'month', 'year'].map((tf) => (
+                  <button
+                    key={tf}
+                    onClick={() => setTimeFrame(tf)}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${timeFrame === tf
+                      ? 'bg-cyan text-black shadow-lg shadow-cyan/20'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      }`}
+                  >
+                    {tf.charAt(0).toUpperCase() + tf.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
+                {timeFrame === 'week' ? 'Weekly' : timeFrame === 'month' ? 'Monthly' : 'Yearly'} Summary
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pb-2">
+              <StatCard
+                icon={<Zap className="w-4 h-4" />}
+                iconColor="text-yellow-400"
+                bgColor="bg-yellow-400/10"
+                label={`${timeFrame === 'month' ? 'Mn' : timeFrame === 'year' ? 'Yr' : 'Wk'} Elec.`}
+                value={costData ? (costData.monthly_electricity_kwh * (timeFrame === 'year' ? 12 : timeFrame === 'week' ? 1 / 4.33 : 1)).toFixed(0) : '0'}
+                unit="kWh"
+                subValue={`${currencySymbol}${costData ? (costData.monthly_electricity_cost * (timeFrame === 'year' ? 12 : timeFrame === 'week' ? 1 / 4.33 : 1)).toFixed(2) : '0'}`}
+              />
+              <StatCard
+                icon={<Droplets className="w-4 h-4" />}
+                iconColor="text-blue-400"
+                bgColor="bg-blue-400/10"
+                label={`${timeFrame === 'month' ? 'Mn' : timeFrame === 'year' ? 'Yr' : 'Wk'} Water`}
+                value={costData ? (costData.monthly_water_m3 * (timeFrame === 'year' ? 12 : timeFrame === 'week' ? 1 / 4.33 : 1)).toFixed(1) : '0'}
+                unit="m³"
+                subValue={`${currencySymbol}${costData ? (costData.monthly_water_cost * (timeFrame === 'year' ? 12 : timeFrame === 'week' ? 1 / 4.33 : 1)).toFixed(2) : '0'}`}
+              />
+              <StatCard
+                icon={<FlaskConical className="w-4 h-4" />}
+                iconColor="text-purple"
+                bgColor="bg-purple/10"
+                label={`${timeFrame === 'month' ? 'Mn' : timeFrame === 'year' ? 'Yr' : 'Wk'} Chem.`}
+                value={`${currencySymbol}${costData ? (costData.monthly_chemical_cost * (timeFrame === 'year' ? 12 : timeFrame === 'week' ? 1 / 4.33 : 1)).toFixed(2) : '0'}`}
+                unit=""
+                subValue={`${selectedChemicals.length} types`}
+              />
+              <StatCard
+                icon={<Clock className="w-4 h-4" />}
+                iconColor="text-amber"
+                bgColor="bg-amber/10"
+                label="Labor Hrs"
+                value={costData ? (costData.monthly_labor_hours * (timeFrame === 'year' ? 12 : timeFrame === 'week' ? 1 / 4.33 : 1)).toFixed(0) : '0'}
+                unit="h"
+                subValue={`${currencySymbol}${costData ? (costData.monthly_labor_cost * (timeFrame === 'year' ? 12 : timeFrame === 'week' ? 1 / 4.33 : 1)).toFixed(2) : '0'}`}
+              />
+            </div>
           </div>
+
 
           {/* Input Tabs */}
           <div className="glass-card p-6">
             <Tabs defaultValue="tariffs" className="w-full">
               <TabsList className="grid w-full grid-cols-3 bg-white/5 p-1 rounded-xl mb-6">
-                <TabsTrigger 
-                  value="tariffs" 
+                <TabsTrigger
+                  value="tariffs"
                   className="rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white"
                   data-testid="tariffs-tab"
                 >
                   <Zap className="w-4 h-4 mr-2" />
                   Tariffs
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="machines" 
+                <TabsTrigger
+                  value="machines"
                   className="rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white"
                   data-testid="machines-tab"
                 >
                   <WashingMachine className="w-4 h-4 mr-2" />
                   Machines
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="chemicals" 
+                <TabsTrigger
+                  value="chemicals"
                   className="rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white"
                   data-testid="chemicals-tab"
                 >
@@ -509,7 +518,7 @@ export default function LaundryDashboard() {
                     <h3 className="font-heading font-semibold text-white">Utility Tariffs</h3>
                   </div>
                   <p className="text-sm text-gray-500 mb-6">Set your local utility rates</p>
-                  
+
                   {/* Currency Selector */}
                   <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
                     <Label className="text-gray-400">Currency</Label>
@@ -527,42 +536,38 @@ export default function LaundryDashboard() {
                     </Select>
                   </div>
 
-                  <SliderInput
-                    icon={<Zap className="w-4 h-4 text-cyan" />}
-                    label="Electricity Rate"
-                    value={config.electricityRate}
-                    onChange={(v) => setConfig(prev => ({ ...prev, electricityRate: v }))}
-                    min={0.05}
-                    max={0.80}
-                    step={0.01}
-                    unit={`${currencySymbol}/kWh`}
-                    color="cyan"
-                    testId="electricity-rate-slider"
-                  />
-                  <SliderInput
-                    icon={<Droplets className="w-4 h-4 text-blue-400" />}
-                    label="Water Rate"
-                    value={config.waterRate}
-                    onChange={(v) => setConfig(prev => ({ ...prev, waterRate: v }))}
-                    min={0.50}
-                    max={10.00}
-                    step={0.10}
-                    unit={`${currencySymbol}/m³`}
-                    color="blue"
-                    testId="water-rate-slider"
-                  />
-                  <SliderInput
-                    icon={<Clock className="w-4 h-4 text-amber" />}
-                    label="Labor Rate"
-                    value={config.laborRate}
-                    onChange={(v) => setConfig(prev => ({ ...prev, laborRate: v }))}
-                    min={5}
-                    max={50}
-                    step={0.50}
-                    unit={`${currencySymbol}/hr`}
-                    color="amber"
-                    testId="labor-rate-slider"
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <CompactNumberInput
+                      icon={<Zap className="w-4 h-4 text-cyan" />}
+                      label="Electricity Rate"
+                      value={config.electricityRate}
+                      onChange={(v) => setConfig(prev => ({ ...prev, electricityRate: v }))}
+                      min={0}
+                      step={0.01}
+                      unit={`${currencySymbol}/kWh`}
+                      color="cyan"
+                    />
+                    <CompactNumberInput
+                      icon={<Droplets className="w-4 h-4 text-blue-400" />}
+                      label="Water Rate"
+                      value={config.waterRate}
+                      onChange={(v) => setConfig(prev => ({ ...prev, waterRate: v }))}
+                      min={0}
+                      step={0.01}
+                      unit={`${currencySymbol}/m³`}
+                      color="blue"
+                    />
+                    <CompactNumberInput
+                      icon={<Clock className="w-4 h-4 text-amber" />}
+                      label="Labor Rate"
+                      value={config.laborRate}
+                      onChange={(v) => setConfig(prev => ({ ...prev, laborRate: v }))}
+                      min={0}
+                      step={0.50}
+                      unit={`${currencySymbol}/hr`}
+                      color="amber"
+                    />
+                  </div>
                 </div>
 
                 {/* Environment Settings */}
@@ -663,8 +668,8 @@ export default function LaundryDashboard() {
                     {locations.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-2">
                         {locations.map(loc => (
-                          <span 
-                            key={loc.id} 
+                          <span
+                            key={loc.id}
                             className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-white/5 rounded-full"
                           >
                             {loc.name}
@@ -690,7 +695,7 @@ export default function LaundryDashboard() {
                   </div>
                   <p className="text-sm text-gray-500 mb-6">Monthly cycles and batch configuration</p>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div>
                       <Label className="text-gray-400 text-sm mb-2 block">Cycles per Month</Label>
                       <Input
@@ -701,30 +706,20 @@ export default function LaundryDashboard() {
                         data-testid="cycles-per-month-input"
                       />
                     </div>
+                    {/* Replaced Batch Weight with Load Percentage */}
                     <div>
-                      <Label className="text-gray-400 text-sm mb-2 block">Batch Weight (kg)</Label>
+                      <Label className="text-gray-400 text-sm mb-2 block">Load Percentage (%)</Label>
                       <Input
                         type="number"
-                        value={config.batchWeightKg}
-                        onChange={(e) => setConfig(prev => ({ ...prev, batchWeightKg: parseFloat(e.target.value) || 0 }))}
+                        value={config.loadPercentage}
+                        onChange={(e) => setConfig(prev => ({ ...prev, loadPercentage: parseFloat(e.target.value) || 0 }))}
+                        min={0}
+                        max={100}
                         className="bg-black/20 border-white/10"
-                        data-testid="batch-weight-input"
                       />
                     </div>
                   </div>
-
-                  <SliderInput
-                    icon={<Wind className="w-4 h-4 text-purple" />}
-                    label="Ironing Percentage"
-                    value={config.ironingPercentage}
-                    onChange={(v) => setConfig(prev => ({ ...prev, ironingPercentage: v }))}
-                    min={0}
-                    max={100}
-                    step={5}
-                    unit="%"
-                    color="purple"
-                    testId="ironing-percentage-slider"
-                  />
+                  {/* Removed Ironing Percentage Slider */}
                 </div>
               </TabsContent>
 
@@ -851,19 +846,111 @@ export default function LaundryDashboard() {
                   )}
                 </div>
 
-                {/* Ironing Machines */}
+                {/* Drying Machines */}
                 <div className="pt-6 border-t border-white/10">
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="font-heading font-semibold text-white flex items-center gap-2">
                         <Wind className="w-4 h-4 text-purple" />
+                        Drying Machines
+                      </h3>
+                      <p className="text-sm text-gray-500">Configure drying machine specifications</p>
+                    </div>
+                    <Dialog open={showDryingMachineDialog} onOpenChange={setShowDryingMachineDialog}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="border-purple/30 text-purple hover:bg-purple/10" data-testid="add-drying-machine-btn">
+                          <Plus className="w-4 h-4 mr-1" /> Add Machine
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="bg-[#18181b] border-white/10">
+                        <DialogHeader>
+                          <DialogTitle>Add Drying Machine</DialogTitle>
+                          <DialogDescription>Enter the specifications for your drying machine.</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label className="text-gray-400">Model Name</Label>
+                            <Input
+                              value={newDryingMachine.model}
+                              onChange={(e) => setNewDryingMachine(prev => ({ ...prev, model: e.target.value }))}
+                              placeholder="e.g., Miele PT 7136"
+                              className="bg-black/20 border-white/10 mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-gray-400">Energy (kWh/cycle)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={newDryingMachine.energy_consumption_kwh_per_cycle}
+                              onChange={(e) => setNewDryingMachine(prev => ({ ...prev, energy_consumption_kwh_per_cycle: parseFloat(e.target.value) }))}
+                              className="bg-black/20 border-white/10 mt-1"
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button onClick={addDryingMachine} className="bg-purple text-white hover:bg-purple/90" data-testid="save-drying-machine-btn">
+                            Save Machine
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+
+                  <Select
+                    value={config.dryingMachineId || ''}
+                    onValueChange={(value) => setConfig(prev => ({ ...prev, dryingMachineId: value || null }))}
+                  >
+                    <SelectTrigger className="bg-black/20 border-white/10" data-testid="drying-machine-select">
+                      <SelectValue placeholder="Select drying machine" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dryingMachines.map(m => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.model} ({m.energy_consumption_kwh_per_cycle}kWh/cycle)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {dryingMachines.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      {dryingMachines.map(m => (
+                        <div key={m.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                          <div>
+                            <div className="font-medium text-white">{m.model}</div>
+                            <div className="text-sm text-gray-400">
+                              {m.energy_consumption_kwh_per_cycle} kWh/cycle
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteDryingMachine(m.id)}
+                            className="text-gray-400 hover:text-red-400"
+                            data-testid={`delete-drying-machine-${m.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Ironing Machines */}
+                <div className="pt-6 border-t border-white/10">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-heading font-semibold text-white flex items-center gap-2">
+                        <Settings className="w-4 h-4 text-amber" />
                         Ironing Machines
                       </h3>
                       <p className="text-sm text-gray-500">Configure ironing machine specifications</p>
                     </div>
                     <Dialog open={showIroningMachineDialog} onOpenChange={setShowIroningMachineDialog}>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="border-purple/30 text-purple hover:bg-purple/10" data-testid="add-ironing-machine-btn">
+                        <Button variant="outline" size="sm" className="border-amber/30 text-amber hover:bg-amber/10" data-testid="add-ironing-machine-btn">
                           <Plus className="w-4 h-4 mr-1" /> Add Machine
                         </Button>
                       </DialogTrigger>
@@ -880,11 +967,10 @@ export default function LaundryDashboard() {
                               onChange={(e) => setNewIroningMachine(prev => ({ ...prev, model: e.target.value }))}
                               placeholder="e.g., Miele HM 21-140"
                               className="bg-black/20 border-white/10 mt-1"
-                              data-testid="new-ironing-machine-model"
                             />
                           </div>
                           <div>
-                            <Label className="text-gray-400">Energy Consumption (kWh/hour)</Label>
+                            <Label className="text-gray-400">Energy (kWh/hour)</Label>
                             <Input
                               type="number"
                               step="0.1"
@@ -895,29 +981,13 @@ export default function LaundryDashboard() {
                           </div>
                         </div>
                         <DialogFooter>
-                          <Button onClick={addIroningMachine} className="bg-purple text-white hover:bg-purple/90" data-testid="save-ironing-machine-btn">
+                          <Button onClick={addIroningMachine} className="bg-amber text-black hover:bg-amber/90" data-testid="save-ironing-machine-btn">
                             Save Machine
                           </Button>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
                   </div>
-
-                  <Select
-                    value={config.ironingMachineId || ''}
-                    onValueChange={(value) => setConfig(prev => ({ ...prev, ironingMachineId: value || null }))}
-                  >
-                    <SelectTrigger className="bg-black/20 border-white/10" data-testid="ironing-machine-select">
-                      <SelectValue placeholder="Select ironing machine" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ironingMachines.map(m => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.model} ({m.energy_consumption_kwh_per_hour}kWh/hr)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
 
                   {ironingMachines.length > 0 && (
                     <div className="mt-4 space-y-2">
@@ -944,21 +1014,7 @@ export default function LaundryDashboard() {
                   )}
                 </div>
 
-                {/* Ironing Time Setting */}
-                <div className="pt-6 border-t border-white/10">
-                  <SliderInput
-                    icon={<Clock className="w-4 h-4 text-amber" />}
-                    label="Ironing Time per kg"
-                    value={config.ironingTimePerKgMin}
-                    onChange={(v) => setConfig(prev => ({ ...prev, ironingTimePerKgMin: v }))}
-                    min={1}
-                    max={15}
-                    step={0.5}
-                    unit="min/kg"
-                    color="amber"
-                    testId="ironing-time-slider"
-                  />
-                </div>
+
               </TabsContent>
 
               <TabsContent value="chemicals" className="space-y-6">
@@ -1061,18 +1117,16 @@ export default function LaundryDashboard() {
                       const isSelected = selectedChemicals.includes(chem.id);
                       const costPerCycle = (chem.package_price / chem.package_weight_g) * chem.usage_per_cycle_g;
                       return (
-                        <div 
-                          key={chem.id} 
-                          className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-all ${
-                            isSelected ? 'bg-purple/20 border border-purple/30' : 'bg-white/5 border border-transparent hover:bg-white/10'
-                          }`}
+                        <div
+                          key={chem.id}
+                          className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-all ${isSelected ? 'bg-purple/20 border border-purple/30' : 'bg-white/5 border border-transparent hover:bg-white/10'
+                            }`}
                           onClick={() => toggleChemical(chem.id)}
                           data-testid={`chemical-item-${chem.id}`}
                         >
                           <div className="flex items-center gap-3">
-                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-                              isSelected ? 'bg-purple border-purple' : 'border-gray-500'
-                            }`}>
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${isSelected ? 'bg-purple border-purple' : 'border-gray-500'
+                              }`}>
                               {isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
                             </div>
                             <div>
@@ -1104,7 +1158,7 @@ export default function LaundryDashboard() {
 
             {/* Action Buttons */}
             <div className="flex gap-3 mt-6 pt-6 border-t border-white/10">
-              <Button 
+              <Button
                 onClick={saveConfiguration}
                 className="flex-1 bg-cyan text-black font-bold hover:bg-cyan/90 rounded-full py-6 btn-glow"
                 data-testid="save-config-btn"
@@ -1112,7 +1166,7 @@ export default function LaundryDashboard() {
                 <Save className="w-4 h-4 mr-2" />
                 Save Configuration
               </Button>
-              <Button 
+              <Button
                 onClick={resetConfiguration}
                 variant="outline"
                 className="border-white/20 hover:bg-white/10 rounded-full px-6"
@@ -1123,48 +1177,14 @@ export default function LaundryDashboard() {
               </Button>
             </div>
           </div>
+
+
+
         </div>
 
+
         {/* Right Column - Charts & Summary */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Cost Breakdown Donut */}
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-heading font-semibold text-white flex items-center gap-2">
-                  <FlaskConical className="w-4 h-4 text-purple" />
-                  Cost Breakdown per kg
-                </h3>
-                <p className="text-sm text-gray-500">Distribution of costs across categories</p>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-heading font-bold text-white">
-                  {currencySymbol}{costData?.cost_per_kg?.toFixed(2) || '0.00'}
-                </div>
-                <div className="text-xs text-gray-500">per kg total</div>
-              </div>
-            </div>
-            <CostBreakdownChart 
-              data={costData} 
-              currencySymbol={currencySymbol}
-            />
-          </div>
-
-          {/* Cost Impact Analysis */}
-          <div className="glass-card p-6">
-            <div className="mb-4">
-              <h3 className="font-heading font-semibold text-white flex items-center gap-2">
-                <Zap className="w-4 h-4 text-amber" />
-                Cost Impact Analysis
-              </h3>
-              <p className="text-sm text-gray-500">Which inputs have the most impact on cost</p>
-            </div>
-            <CostImpactChart 
-              data={costData}
-              currencySymbol={currencySymbol}
-            />
-          </div>
-
+        <div className="lg:col-span-5 flex flex-col gap-6">
           {/* Monthly Summary */}
           <div className="glass-card p-6">
             <div className="flex items-center gap-2 mb-4">
@@ -1172,21 +1192,21 @@ export default function LaundryDashboard() {
               <h3 className="font-heading font-semibold text-white">Monthly Summary</h3>
             </div>
             <p className="text-sm text-gray-500 mb-4">
-              Based on {config.cyclesPerMonth} cycles × {config.batchWeightKg}kg = {costData?.total_kg_processed || 0}kg/month
+              Based on {config.cyclesPerMonth} cycles @ {config.loadPercentage}% load ≈ {costData?.total_kg_processed || 0}kg/month
             </p>
 
             <div className="space-y-3">
-              <SummaryRow 
-                label="Total Monthly Cost" 
+              <SummaryRow
+                label="Total Monthly Cost"
                 value={`${currencySymbol}${costData?.total_monthly_cost?.toFixed(2) || '0.00'}`}
                 highlight
               />
-              <SummaryRow 
-                label="Cost per Cycle" 
+              <SummaryRow
+                label="Cost per Cycle"
                 value={`${currencySymbol}${costData?.cost_per_cycle?.toFixed(2) || '0.00'}`}
               />
-              <SummaryRow 
-                label="Total kg Processed" 
+              <SummaryRow
+                label="Total kg Processed"
                 value={`${costData?.total_kg_processed?.toFixed(0) || '0'} kg`}
               />
             </div>
@@ -1204,6 +1224,44 @@ export default function LaundryDashboard() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Cost Breakdown Donut */}
+          <div className="glass-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-heading font-semibold text-white flex items-center gap-2">
+                  <FlaskConical className="w-4 h-4 text-purple" />
+                  Cost Breakdown per kg
+                </h3>
+                <p className="text-sm text-gray-500">Distribution of costs across categories</p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-heading font-bold text-white">
+                  {currencySymbol}{costData?.cost_per_kg?.toFixed(2) || '0.00'}
+                </div>
+                <div className="text-xs text-gray-500">per kg total</div>
+              </div>
+            </div>
+            <CostBreakdownChart
+              data={costData}
+              currencySymbol={currencySymbol}
+            />
+          </div>
+
+          {/* Cost Impact Analysis */}
+          <div className="glass-card p-6">
+            <div className="mb-4">
+              <h3 className="font-heading font-semibold text-white flex items-center gap-2">
+                <Zap className="w-4 h-4 text-amber" />
+                Cost Impact Analysis
+              </h3>
+              <p className="text-sm text-gray-500">Which inputs have the most impact on cost</p>
+            </div>
+            <CostImpactChart
+              data={costData}
+              currencySymbol={currencySymbol}
+            />
           </div>
         </div>
       </div>
@@ -1228,37 +1286,26 @@ function StatCard({ icon, iconColor, bgColor, label, value, unit, subValue }) {
   );
 }
 
-function SliderInput({ icon, label, value, onChange, min, max, step, unit, color, testId }) {
-  const colorClasses = {
-    cyan: 'bg-cyan',
-    blue: 'bg-blue-400',
-    amber: 'bg-amber',
-    purple: 'bg-purple'
-  };
-
+function CompactNumberInput({ icon, label, value, onChange, min, max, step, unit, color }) {
   return (
-    <div className="mb-6">
-      <div className="flex items-center justify-between mb-2">
-        <Label className="text-gray-400 flex items-center gap-2">
-          {icon}
-          {label}
-        </Label>
-        <span className="text-white font-medium">
-          {typeof value === 'number' ? value.toFixed(2) : value} <span className="text-gray-500">{unit}</span>
-        </span>
-      </div>
-      <Slider
-        value={[value]}
-        onValueChange={(v) => onChange(v[0])}
-        min={min}
-        max={max}
-        step={step}
-        className="custom-slider"
-        data-testid={testId}
-      />
-      <div className="flex justify-between text-xs text-gray-600 mt-1">
-        <span>{min}</span>
-        <span>{max}</span>
+    <div className="mb-4">
+      <Label className="text-gray-400 text-xs mb-1.5 flex items-center gap-1.5">
+        {icon}
+        {label}
+      </Label>
+      <div className="relative">
+        <Input
+          type="number"
+          value={value}
+          onChange={(e) => onChange(parseFloat(e.target.value))}
+          min={min}
+          max={max}
+          step={step}
+          className={`bg-black/20 border-white/10 h-8 text-sm pr-12 focus:border-${color || 'cyan'}/50 transition-colors`}
+        />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 pointer-events-none">
+          {unit}
+        </div>
       </div>
     </div>
   );
@@ -1275,23 +1322,23 @@ function SummaryRow({ label, value, highlight }) {
 
 function getKeyInsight(costData) {
   if (!costData) return '';
-  
+
   const costs = [
     { name: 'Labor', value: costData.labor_cost_per_kg },
     { name: 'Electricity', value: costData.electricity_cost_per_kg },
     { name: 'Water', value: costData.water_cost_per_kg },
     { name: 'Chemicals', value: costData.chemical_cost_per_kg }
   ];
-  
+
   const highest = costs.reduce((a, b) => a.value > b.value ? a : b);
   const percentage = ((highest.value / costData.cost_per_kg) * 100).toFixed(1);
-  
+
   const insights = {
     Labor: `Labor costs dominate at ${percentage}%. Consider automation or efficiency improvements.`,
     Electricity: `Electricity is your biggest expense at ${percentage}%. Look into energy-efficient machines or off-peak tariffs.`,
     Water: `Water costs are highest at ${percentage}%. Consider water recycling or more efficient machines.`,
     Chemicals: `Chemicals make up ${percentage}% of costs. Review supplier pricing or dosage optimization.`
   };
-  
+
   return insights[highest.name];
 }

@@ -59,6 +59,16 @@ def init_db():
         )
     ''')
     
+    # Drying Machines table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS drying_machines (
+            id TEXT PRIMARY KEY,
+            model TEXT NOT NULL,
+            energy_consumption_kwh_per_cycle REAL NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    ''')
+    
     # Chemicals table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS chemicals (
@@ -85,11 +95,9 @@ def init_db():
             tariff_mode TEXT NOT NULL,
             location_id TEXT,
             washing_machine_id TEXT,
-            ironing_machine_id TEXT,
+            drying_machine_id TEXT,
             cycles_per_month INTEGER NOT NULL,
-            batch_weight_kg REAL NOT NULL,
-            ironing_percentage REAL NOT NULL,
-            ironing_time_per_kg_min REAL NOT NULL,
+            load_percentage REAL NOT NULL,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
@@ -132,6 +140,16 @@ class WashingMachine(BaseModel):
     cycle_duration_min: int
     created_at: str
 
+class DryingMachineCreate(BaseModel):
+    model: str
+    energy_consumption_kwh_per_cycle: float
+
+class DryingMachine(BaseModel):
+    id: str
+    model: str
+    energy_consumption_kwh_per_cycle: float
+    created_at: str
+
 class IroningMachineCreate(BaseModel):
     model: str
     energy_consumption_kwh_per_hour: float
@@ -168,11 +186,9 @@ class ConfigurationCreate(BaseModel):
     tariff_mode: str
     location_id: Optional[str] = None
     washing_machine_id: Optional[str] = None
-    ironing_machine_id: Optional[str] = None
+    drying_machine_id: Optional[str] = None
     cycles_per_month: int
-    batch_weight_kg: float
-    ironing_percentage: float
-    ironing_time_per_kg_min: float = 5.0
+    load_percentage: float = 80.0
 
 class Configuration(BaseModel):
     id: str
@@ -185,11 +201,9 @@ class Configuration(BaseModel):
     tariff_mode: str
     location_id: Optional[str]
     washing_machine_id: Optional[str]
-    ironing_machine_id: Optional[str]
+    drying_machine_id: Optional[str]
     cycles_per_month: int
-    batch_weight_kg: float
-    ironing_percentage: float
-    ironing_time_per_kg_min: float
+    load_percentage: float
     created_at: str
     updated_at: str
 
@@ -201,11 +215,9 @@ class CostCalculationRequest(BaseModel):
     season: str
     tariff_mode: str
     cycles_per_month: int
-    batch_weight_kg: float
-    ironing_percentage: float
-    ironing_time_per_kg_min: float = 5.0
+    load_percentage: float
     washing_machine_id: Optional[str] = None
-    ironing_machine_id: Optional[str] = None
+    drying_machine_id: Optional[str] = None
     chemical_ids: List[str] = []
 
 class CostBreakdown(BaseModel):
@@ -312,6 +324,46 @@ async def delete_washing_machine(machine_id: str):
     conn.close()
     return {"status": "deleted"}
 
+# Drying Machine Routes
+@api_router.post("/drying-machines", response_model=DryingMachine)
+async def create_drying_machine(data: DryingMachineCreate):
+    conn = get_db()
+    cursor = conn.cursor()
+    machine_id = str(uuid.uuid4())
+    created_at = datetime.now(timezone.utc).isoformat()
+    
+    cursor.execute(
+        """INSERT INTO drying_machines 
+        (id, model, energy_consumption_kwh_per_cycle, created_at) 
+        VALUES (?, ?, ?, ?)""",
+        (machine_id, data.model, data.energy_consumption_kwh_per_cycle, created_at)
+    )
+    conn.commit()
+    conn.close()
+    
+    return DryingMachine(
+        id=machine_id, model=data.model,
+        energy_consumption_kwh_per_cycle=data.energy_consumption_kwh_per_cycle, created_at=created_at
+    )
+
+@api_router.get("/drying-machines", response_model=List[DryingMachine])
+async def get_drying_machines():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM drying_machines ORDER BY model")
+    rows = cursor.fetchall()
+    conn.close()
+    return [DryingMachine(**dict(row)) for row in rows]
+
+@api_router.delete("/drying-machines/{machine_id}")
+async def delete_drying_machine(machine_id: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM drying_machines WHERE id = ?", (machine_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "deleted"}
+
 # Ironing Machine Routes
 @api_router.post("/ironing-machines", response_model=IroningMachine)
 async def create_ironing_machine(data: IroningMachineCreate):
@@ -405,13 +457,12 @@ async def save_configuration(data: ConfigurationCreate):
     cursor.execute(
         """INSERT INTO configurations 
         (id, name, currency, electricity_rate, water_rate, labor_rate, season, tariff_mode,
-         location_id, washing_machine_id, ironing_machine_id, cycles_per_month, batch_weight_kg,
-         ironing_percentage, ironing_time_per_kg_min, created_at, updated_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+         location_id, washing_machine_id, drying_machine_id, cycles_per_month, load_percentage,
+         created_at, updated_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (config_id, data.name, data.currency, data.electricity_rate, data.water_rate, data.labor_rate,
-         data.season, data.tariff_mode, data.location_id, data.washing_machine_id, data.ironing_machine_id,
-         data.cycles_per_month, data.batch_weight_kg, data.ironing_percentage, 
-         data.ironing_time_per_kg_min, now, now)
+         data.season, data.tariff_mode, data.location_id, data.washing_machine_id, data.drying_machine_id,
+         data.cycles_per_month, data.load_percentage, now, now)
     )
     conn.commit()
     conn.close()
@@ -420,9 +471,8 @@ async def save_configuration(data: ConfigurationCreate):
         id=config_id, name=data.name, currency=data.currency,
         electricity_rate=data.electricity_rate, water_rate=data.water_rate, labor_rate=data.labor_rate,
         season=data.season, tariff_mode=data.tariff_mode, location_id=data.location_id,
-        washing_machine_id=data.washing_machine_id, ironing_machine_id=data.ironing_machine_id,
-        cycles_per_month=data.cycles_per_month, batch_weight_kg=data.batch_weight_kg,
-        ironing_percentage=data.ironing_percentage, ironing_time_per_kg_min=data.ironing_time_per_kg_min,
+        washing_machine_id=data.washing_machine_id, drying_machine_id=data.drying_machine_id,
+        cycles_per_month=data.cycles_per_month, load_percentage=data.load_percentage,
         created_at=now, updated_at=now
     )
 
@@ -469,13 +519,13 @@ async def calculate_cost(data: CostCalculationRequest):
         if row:
             washing_machine = dict(row)
     
-    # Get ironing machine details
-    ironing_machine = None
-    if data.ironing_machine_id:
-        cursor.execute("SELECT * FROM ironing_machines WHERE id = ?", (data.ironing_machine_id,))
+    # Get drying machine details
+    drying_machine = None
+    if data.drying_machine_id:
+        cursor.execute("SELECT * FROM drying_machines WHERE id = ?", (data.drying_machine_id,))
         row = cursor.fetchone()
         if row:
-            ironing_machine = dict(row)
+            drying_machine = dict(row)
     
     # Get chemicals
     chemicals = []
@@ -501,37 +551,33 @@ async def calculate_cost(data: CostCalculationRequest):
     
     # Calculate monthly totals
     cycles = data.cycles_per_month
-    batch_kg = data.batch_weight_kg
+    
+    # Calculate Weight processed based on Machine Capacity * Load Percentage
+    # Default to 8kg * load percentage if no machine selected
+    machine_capacity = washing_machine['capacity_kg'] if washing_machine else 8.0
+    batch_kg = machine_capacity * (data.load_percentage / 100.0)
     total_kg = cycles * batch_kg
     
-    # Default values if no machine selected
-    water_per_cycle = 50  # liters
-    energy_per_cycle = 1.5  # kWh
+    # Consumption per cycle
+    # Washing
+    water_per_cycle = washing_machine['water_consumption_l'] if washing_machine else 50.0
+    washing_energy_per_cycle = washing_machine['energy_consumption_kwh'] if washing_machine else 1.5
     
-    if washing_machine:
-        water_per_cycle = washing_machine['water_consumption_l']
-        energy_per_cycle = washing_machine['energy_consumption_kwh']
+    # Drying
+    drying_energy_per_cycle = 0.0
+    if drying_machine:
+        drying_energy_per_cycle = drying_machine['energy_consumption_kwh_per_cycle']
     
     # Washing costs
     monthly_water_l = water_per_cycle * cycles
     monthly_water_m3 = monthly_water_l / 1000
     monthly_water_cost = monthly_water_m3 * data.water_rate * tariff_multiplier
     
-    monthly_washing_kwh = energy_per_cycle * cycles
+    monthly_washing_kwh = washing_energy_per_cycle * cycles
+    monthly_drying_kwh = drying_energy_per_cycle * cycles
     
-    # Ironing costs
-    ironing_percentage = data.ironing_percentage / 100
-    kg_to_iron = total_kg * ironing_percentage
-    ironing_time_hours = (kg_to_iron * data.ironing_time_per_kg_min) / 60
-    
-    ironing_kwh_per_hour = 2.0  # default
-    if ironing_machine:
-        ironing_kwh_per_hour = ironing_machine['energy_consumption_kwh_per_hour']
-    
-    monthly_ironing_kwh = ironing_time_hours * ironing_kwh_per_hour
-    
-    # Total electricity
-    monthly_electricity_kwh = monthly_washing_kwh + monthly_ironing_kwh
+    # Total electricity (Washing + Drying)
+    monthly_electricity_kwh = monthly_washing_kwh + monthly_drying_kwh
     monthly_electricity_cost = monthly_electricity_kwh * data.electricity_rate * tariff_multiplier
     
     # Chemical costs
@@ -540,9 +586,9 @@ async def calculate_cost(data: CostCalculationRequest):
         cost_per_g = chem['package_price'] / chem['package_weight_g']
         monthly_chemical_cost += cost_per_g * chem['usage_per_cycle_g'] * cycles
     
-    # Labor costs (estimate: 15 min per cycle for washing + ironing time)
-    washing_labor_hours = (cycles * 15) / 60  # 15 min per cycle
-    total_labor_hours = washing_labor_hours + ironing_time_hours
+    # Labor costs (estimate: 20 min per cycle total for wash/dry/fold)
+    labor_hours_per_cycle = 20 / 60
+    total_labor_hours = cycles * labor_hours_per_cycle
     monthly_labor_cost = total_labor_hours * data.labor_rate
     
     # Total costs
