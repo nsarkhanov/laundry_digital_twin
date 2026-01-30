@@ -79,8 +79,9 @@ def init_db():
             name TEXT NOT NULL,
             type TEXT NOT NULL,
             package_price REAL NOT NULL,
-            package_weight_g REAL NOT NULL,
-            usage_per_cycle_g REAL NOT NULL,
+            package_amount REAL NOT NULL,
+            usage_per_cycle REAL NOT NULL,
+            unit TEXT NOT NULL DEFAULT 'g',
             created_at TEXT NOT NULL
         )
     ''')
@@ -101,7 +102,9 @@ def init_db():
             drying_machine_id TEXT,
             ironing_machine_id TEXT,
             cycles_per_month INTEGER NOT NULL,
-            load_percentage REAL NOT NULL,
+            washing_load_percentage REAL NOT NULL DEFAULT 80.0,
+            drying_load_percentage REAL NOT NULL DEFAULT 80.0,
+            ironing_labor_hours REAL NOT NULL DEFAULT 10.0,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
@@ -174,16 +177,18 @@ class ChemicalCreate(BaseModel):
     name: str
     type: str  # 'washing_powder' or 'stain_remover'
     package_price: float
-    package_weight_g: float
-    usage_per_cycle_g: float
+    package_amount: float
+    usage_per_cycle: float
+    unit: str = 'g'
 
 class Chemical(BaseModel):
     id: str
     name: str
     type: str
     package_price: float
-    package_weight_g: float
-    usage_per_cycle_g: float
+    package_amount: float
+    usage_per_cycle: float
+    unit: str
     created_at: str
 
 class ConfigurationCreate(BaseModel):
@@ -199,7 +204,12 @@ class ConfigurationCreate(BaseModel):
     drying_machine_id: Optional[str] = None
     ironing_machine_id: Optional[str] = None
     cycles_per_month: int
-    load_percentage: float = 80.0
+    operational_volume: float = 1000.0
+    operational_period: str = "month"
+    washing_load_percentage: float = 80.0
+    drying_load_percentage: float = 80.0
+    ironing_labor_hours: float = 10.0
+    chemical_ids: List[str] = []
 
 class Configuration(BaseModel):
     id: str
@@ -215,7 +225,12 @@ class Configuration(BaseModel):
     drying_machine_id: Optional[str]
     ironing_machine_id: Optional[str]
     cycles_per_month: int
-    load_percentage: float
+    operational_volume: float = 1000.0
+    operational_period: str = "month"
+    washing_load_percentage: float
+    drying_load_percentage: float
+    ironing_labor_hours: float
+    chemical_ids: List[str] = []
     created_at: str
     updated_at: str
 
@@ -227,7 +242,9 @@ class CostCalculationRequest(BaseModel):
     season: str
     tariff_mode: str
     cycles_per_month: int
-    load_percentage: float
+    washing_load_percentage: float = 80.0
+    drying_load_percentage: float = 80.0
+    ironing_labor_hours: float = 10.0
     washing_machine_id: Optional[str] = None
     drying_machine_id: Optional[str] = None
     ironing_machine_id: Optional[str] = None
@@ -430,18 +447,18 @@ async def create_chemical(data: ChemicalCreate):
     
     cursor.execute(
         """INSERT INTO chemicals 
-        (id, name, type, package_price, package_weight_g, usage_per_cycle_g, created_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (id, name, type, package_price, package_amount, usage_per_cycle, unit, created_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
         (chemical_id, data.name, data.type, data.package_price, 
-         data.package_weight_g, data.usage_per_cycle_g, created_at)
+         data.package_amount, data.usage_per_cycle, data.unit, created_at)
     )
     conn.commit()
     conn.close()
     
     return Chemical(
         id=chemical_id, name=data.name, type=data.type,
-        package_price=data.package_price, package_weight_g=data.package_weight_g,
-        usage_per_cycle_g=data.usage_per_cycle_g, created_at=created_at
+        package_price=data.package_price, package_amount=data.package_amount,
+        usage_per_cycle=data.usage_per_cycle, unit=data.unit, created_at=created_at
     )
 
 @api_router.get("/chemicals", response_model=List[Chemical])
@@ -473,12 +490,18 @@ async def save_configuration(data: ConfigurationCreate):
     cursor.execute(
         """INSERT INTO configurations 
         (id, name, currency, electricity_rate, water_rate, labor_rate, season, tariff_mode,
-         location_id, washing_machine_id, drying_machine_id, ironing_machine_id, cycles_per_month, load_percentage,
+         location_id, washing_machine_id, drying_machine_id, ironing_machine_id, cycles_per_month, 
+         operational_volume, operational_period,
+         washing_load_percentage, drying_load_percentage, ironing_labor_hours, chemical_ids,
          created_at, updated_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (config_id, data.name, data.currency, data.electricity_rate, data.water_rate, data.labor_rate,
          data.season, data.tariff_mode, data.location_id, data.washing_machine_id, data.drying_machine_id,
-         data.ironing_machine_id, data.cycles_per_month, data.load_percentage, now, now)
+         data.ironing_machine_id, data.cycles_per_month, 
+         data.operational_volume, data.operational_period,
+         data.washing_load_percentage, data.drying_load_percentage, data.ironing_labor_hours,
+         ",".join(data.chemical_ids) if data.chemical_ids else "",
+         now, now)
     )
     conn.commit()
     conn.close()
@@ -489,7 +512,13 @@ async def save_configuration(data: ConfigurationCreate):
         season=data.season, tariff_mode=data.tariff_mode, location_id=data.location_id,
         washing_machine_id=data.washing_machine_id, drying_machine_id=data.drying_machine_id,
         ironing_machine_id=data.ironing_machine_id,
-        cycles_per_month=data.cycles_per_month, load_percentage=data.load_percentage,
+        cycles_per_month=data.cycles_per_month, 
+        operational_volume=data.operational_volume,
+        operational_period=data.operational_period,
+        washing_load_percentage=data.washing_load_percentage,
+        drying_load_percentage=data.drying_load_percentage,
+        ironing_labor_hours=data.ironing_labor_hours,
+        chemical_ids=data.chemical_ids,
         created_at=now, updated_at=now
     )
 
@@ -510,7 +539,11 @@ async def get_latest_configuration():
     row = cursor.fetchone()
     conn.close()
     if row:
-        return Configuration(**dict(row))
+        row_dict = dict(row)
+        # Parse chemical_ids from comma-separated string to list
+        chemical_ids_str = row_dict.get('chemical_ids', '')
+        row_dict['chemical_ids'] = chemical_ids_str.split(',') if chemical_ids_str else []
+        return Configuration(**row_dict)
     return None
 
 @api_router.delete("/configurations/{config_id}")
@@ -578,9 +611,12 @@ async def calculate_cost(data: CostCalculationRequest):
     cycles = data.cycles_per_month
     
     # Calculate Weight processed based on Machine Capacity * Load Percentage
-    # Default to 8kg * load percentage if no machine selected
+    # machine_capacity = washing_machine['capacity_kg'] if washing_machine else 8.0
+    # batch_kg = machine_capacity * (data.load_percentage / 100.0)
+    
+    # Use per-machine load percentages
     machine_capacity = washing_machine['capacity_kg'] if washing_machine else 8.0
-    batch_kg = machine_capacity * (data.load_percentage / 100.0)
+    batch_kg = machine_capacity * (data.washing_load_percentage / 100.0)
     total_kg = cycles * batch_kg
     
     # Consumption per cycle
@@ -598,7 +634,7 @@ async def calculate_cost(data: CostCalculationRequest):
     monthly_ironing_hours = 0.0
     
     if ironing_machine:
-        monthly_ironing_hours = ironing_machine['ironing_labor_hours']
+        monthly_ironing_hours = data.ironing_labor_hours
         monthly_ironing_kwh = monthly_ironing_hours * ironing_machine['energy_consumption_kwh_per_hour']
     
     # Washing costs
@@ -616,8 +652,8 @@ async def calculate_cost(data: CostCalculationRequest):
     # Chemical costs
     monthly_chemical_cost = 0.0
     for chem in chemicals:
-        cost_per_g = chem['package_price'] / chem['package_weight_g']
-        monthly_chemical_cost += cost_per_g * chem['usage_per_cycle_g'] * cycles
+        cost_per_unit = chem['package_price'] / chem['package_amount']
+        monthly_chemical_cost += cost_per_unit * chem['usage_per_cycle'] * cycles
     
     # Labor costs
     # Base labor: 20 min per cycle total for wash/dry/fold
@@ -660,16 +696,17 @@ async def calculate_cost(data: CostCalculationRequest):
         cost_per_cycle=round(cost_per_cycle, 2)
     )
 
-# Include the router in the main app
-app.include_router(api_router)
-
+# CORS must be added BEFORE routes
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include the router in the main app
+app.include_router(api_router)
 
 # Configure logging
 logging.basicConfig(

@@ -27,7 +27,9 @@ const defaultConfig = {
   cyclesPerMonth: 200,
   operationalVolume: 1000,
   operationalPeriod: 'month',
-  loadPercentage: 80.0,
+  washingLoadPercentage: 80,
+  dryingLoadPercentage: 80,
+  ironingLaborHours: 10,
   tariffModePrice: 1.0
 };
 
@@ -60,10 +62,18 @@ export default function LaundryDashboard() {
           locationId: configRes.data.location_id,
           washingMachineId: configRes.data.washing_machine_id,
           dryingMachineId: configRes.data.drying_machine_id,
-          ironingMachineId: configRes.data.ironing_machine_id, // Ensure this is loaded
+          ironingMachineId: configRes.data.ironing_machine_id,
           cyclesPerMonth: configRes.data.cycles_per_month,
-          loadPercentage: configRes.data.load_percentage,
+          operationalVolume: configRes.data.operational_volume || 1000,
+          operationalPeriod: configRes.data.operational_period || 'month',
+          washingLoadPercentage: configRes.data.washing_load_percentage || 80,
+          dryingLoadPercentage: configRes.data.drying_load_percentage || 80,
+          ironingLaborHours: configRes.data.ironing_labor_hours || 10,
         });
+        // Also load selected chemicals if available
+        if (configRes.data.chemical_ids && configRes.data.chemical_ids.length > 0) {
+          setSelectedChemicals(configRes.data.chemical_ids);
+        }
       }
     } catch {
       // No saved config, use defaults
@@ -89,7 +99,12 @@ export default function LaundryDashboard() {
         drying_machine_id: config.dryingMachineId,
         ironing_machine_id: config.ironingMachineId,
         cycles_per_month: config.cyclesPerMonth,
-        load_percentage: config.loadPercentage
+        operational_volume: config.operationalVolume,
+        operational_period: config.operationalPeriod,
+        washing_load_percentage: config.washingLoadPercentage,
+        drying_load_percentage: config.dryingLoadPercentage,
+        ironing_labor_hours: config.ironingLaborHours,
+        chemical_ids: selectedChemicals
       });
       toast.success('Configuration saved successfully');
     } catch (error) {
@@ -117,7 +132,7 @@ export default function LaundryDashboard() {
           if (config.operationalPeriod === 'week') multiplier = 4.33;
 
           const totalVolume = config.operationalVolume * multiplier;
-          const effectiveCapacity = machine.capacity_kg * (config.loadPercentage / 100);
+          const effectiveCapacity = machine.capacity_kg * ((config.washingLoadPercentage ?? 80) / 100);
           cycles = effectiveCapacity > 0 ? Math.ceil(totalVolume / effectiveCapacity) : 0;
         }
       }
@@ -132,7 +147,7 @@ export default function LaundryDashboard() {
           if (config.operationalPeriod === 'week') multiplier = 4.33;
 
           const totalVolume = config.operationalVolume * multiplier;
-          const effectiveCapacity = machine.capacity_kg * (config.loadPercentage / 100);
+          const effectiveCapacity = machine.capacity_kg * ((config.dryingLoadPercentage ?? 80) / 100);
           dryingCycles = effectiveCapacity > 0 ? Math.ceil(totalVolume / effectiveCapacity) : 0;
         }
       }
@@ -145,10 +160,12 @@ export default function LaundryDashboard() {
         season: config.season,
         tariff_mode: config.tariffMode,
         cycles_per_month: cycles,
-        load_percentage: config.loadPercentage,
+        washing_load_percentage: config.washingLoadPercentage ?? 80,
+        drying_load_percentage: config.dryingLoadPercentage ?? 80,
         washing_machine_id: config.washingMachineId,
         drying_machine_id: config.dryingMachineId,
         ironing_machine_id: config.ironingMachineId,
+        ironing_labor_hours: config.ironingLaborHours,
         chemical_ids: selectedChemicals
       });
 

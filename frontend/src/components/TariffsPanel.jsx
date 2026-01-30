@@ -87,25 +87,21 @@ export default function TariffsPanel({
 
                 {/* Rate Inputs */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {/* Tariff Mode Selector (Moved to First) */}
+                    {/* Tariff Mode Selector */}
                     <div>
-                        <div className="flex justify-between items-center mb-1.5">
-                            <Label className="text-gray-400 text-xs flex items-center gap-1.5">
-                                <Settings className="w-3 h-3 text-cyan" />
-                                Tariff Mode
-                            </Label>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-4 w-4 p-0 text-gray-500 hover:text-cyan"
-                                onClick={() => setConfig(prev => ({ ...prev, showTariffPrice: !prev.showTariffPrice }))}
-                            >
-                                <Settings className="w-3 h-3" />
-                            </Button>
-                        </div>
+                        <Label className="text-gray-400 text-xs flex items-center gap-1.5 mb-1.5">
+                            <Settings className="w-3 h-3 text-cyan" />
+                            Tariff Mode
+                        </Label>
                         <Select
                             value={config.tariffMode}
-                            onValueChange={(value) => setConfig(prev => ({ ...prev, tariffMode: value }))}
+                            onValueChange={(value) => {
+                                // Set default price adjustment when switching modes
+                                let defaultPrice = 1.0;
+                                if (value === 'high') defaultPrice = 1.2; // +20% by default
+                                if (value === 'low') defaultPrice = 0.8; // -20% by default
+                                setConfig(prev => ({ ...prev, tariffMode: value, tariffModePrice: defaultPrice }));
+                            }}
                         >
                             <SelectTrigger className="bg-black/20 border-white/10 h-8 text-sm" data-testid="tariff-mode-select">
                                 <SelectValue />
@@ -117,32 +113,49 @@ export default function TariffsPanel({
                             </SelectContent>
                         </Select>
 
-                        {config.showTariffPrice && (
-                            <div className="mt-2 animate-in fade-in slide-in-from-top-1 px-1">
+                        {/* Show price adjustment only for High or Low */}
+                        {(config.tariffMode === 'high' || config.tariffMode === 'low') && (
+                            <div className={`mt-3 p-3 rounded-lg border animate-in fade-in slide-in-from-top-1 ${config.tariffMode === 'high'
+                                    ? 'bg-orange-500/5 border-orange-500/20'
+                                    : 'bg-green-500/5 border-green-500/20'
+                                }`}>
                                 <div className="flex items-center justify-between mb-2">
-                                    <Label className="text-[10px] text-gray-500">Percentage</Label>
-                                    <div className="relative w-16">
-                                        <DoubleInput
-                                            step="any"
-                                            value={config.tariffModePrice ? config.tariffModePrice * 100 : ''}
-                                            onChange={(val) => {
-                                                const newVal = val === 0 ? undefined : val / 100;
-                                                setConfig(prev => ({ ...prev, tariffModePrice: newVal }));
-                                            }}
-                                            className="bg-black/20 border-white/10 h-6 text-xs pr-5 text-right px-1"
-                                            placeholder="100"
-                                        />
-                                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-500">%</span>
-                                    </div>
+                                    <Label className="text-[10px] text-gray-400">
+                                        {config.tariffMode === 'high' ? 'Premium over Standard' : 'Discount from Standard'}
+                                    </Label>
+                                    <span className={`text-sm font-bold px-2 py-0.5 rounded ${config.tariffMode === 'high'
+                                            ? 'bg-orange-500/20 text-orange-400'
+                                            : 'bg-green-500/20 text-green-400'
+                                        }`}>
+                                        {config.tariffMode === 'high'
+                                            ? `+${Math.round((config.tariffModePrice || 1) * 100 - 100)}%`
+                                            : `-${Math.round(100 - (config.tariffModePrice || 1) * 100)}%`
+                                        }
+                                    </span>
                                 </div>
                                 <Slider
-                                    value={[config.tariffModePrice ? config.tariffModePrice * 100 : 100]}
+                                    value={[config.tariffMode === 'high'
+                                        ? ((config.tariffModePrice || 1) - 1) * 100
+                                        : (1 - (config.tariffModePrice || 1)) * 100
+                                    ]}
                                     min={0}
-                                    max={200}
-                                    step={0.1}
-                                    onValueChange={([val]) => setConfig(prev => ({ ...prev, tariffModePrice: val / 100 }))}
+                                    max={config.tariffMode === 'high' ? 100 : 50}
+                                    step={5}
+                                    onValueChange={([val]) => {
+                                        const price = config.tariffMode === 'high'
+                                            ? 1 + val / 100  // High: 100% slider = +100% = 2.0x
+                                            : 1 - val / 100; // Low: 50% slider = -50% = 0.5x
+                                        setConfig(prev => ({ ...prev, tariffModePrice: price }));
+                                    }}
                                     className="my-1"
                                 />
+                                <div className="flex justify-between text-[9px] text-gray-500 mt-1">
+                                    <span>{config.tariffMode === 'high' ? '0%' : '0%'}</span>
+                                    <span className="text-gray-600">
+                                        {config.tariffMode === 'high' ? 'More expensive →' : 'Cheaper →'}
+                                    </span>
+                                    <span>{config.tariffMode === 'high' ? '+100%' : '-50%'}</span>
+                                </div>
                             </div>
                         )}
                     </div>

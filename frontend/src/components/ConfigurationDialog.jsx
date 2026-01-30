@@ -63,7 +63,7 @@ export default function ConfigurationDialog({
     });
     const [newChemical, setNewChemical] = useState({
         name: '', type: 'washing_powder', package_price: 10,
-        package_weight_g: 1000, usage_per_cycle_g: 50
+        package_amount: 1000, usage_per_cycle: 50, unit: 'g'
     });
 
     const handleAddLocation = async () => {
@@ -105,7 +105,7 @@ export default function ConfigurationDialog({
         if (await actions.addChemical(newChemical)) {
             setNewChemical({
                 name: '', type: 'washing_powder', package_price: 10,
-                package_weight_g: 1000, usage_per_cycle_g: 50
+                package_amount: 1000, usage_per_cycle: 50, unit: 'g'
             });
             setShowChemicalDialog(false);
         }
@@ -191,25 +191,32 @@ export default function ConfigurationDialog({
                                                     <div><Label className="text-gray-400">Energy (kWh/cycle)</Label><DoubleInput step="any" value={newWashingMachine.energy_consumption_kwh} onChange={(val) => setNewWashingMachine(prev => ({ ...prev, energy_consumption_kwh: val }))} className="bg-black/20 border-white/10 mt-1" /></div>
                                                     <div><Label className="text-gray-400">Cycle Duration (min)</Label><DoubleInput step="any" value={newWashingMachine.cycle_duration_min} onChange={(val) => setNewWashingMachine(prev => ({ ...prev, cycle_duration_min: val }))} className="bg-black/20 border-white/10 mt-1" /></div>
                                                 </div>
-                                                <div className="p-3 bg-cyan/5 border border-cyan/10 rounded-lg">
-                                                    <div className="flex justify-between items-center mb-2">
-                                                        <Label className="text-gray-400 text-xs">Average Load Percentage</Label>
-                                                        <span className="text-cyan font-bold text-xs">{config.loadPercentage}%</span>
-                                                    </div>
-                                                    <Slider
-                                                        value={[config.loadPercentage]}
-                                                        onValueChange={(vals) => setConfig(prev => ({ ...prev, loadPercentage: vals[0] }))}
-                                                        max={100} step={0.1} className="py-2"
-                                                    />
-                                                </div>
                                             </div>
                                             <DialogFooter><Button onClick={handleAddWashingMachine} className="bg-cyan text-black hover:bg-cyan/90">Save Machine</Button></DialogFooter>
                                         </DialogContent>
                                     </Dialog>
                                 </div>
-                                <Select value={config.washingMachineId || ''} onValueChange={(value) => setConfig(prev => ({ ...prev, washingMachineId: value || null }))}><SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder="Select washing machine" /></SelectTrigger><SelectContent>{washingMachines.map(m => (<SelectItem key={m.id} value={m.id}>{m.model} ({m.capacity_kg}kg)</SelectItem>))}</SelectContent></Select>
-
-                                {washingMachines.length > 0 && (<div className="mt-4 space-y-2">{washingMachines.map(m => (<div key={m.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg"><div><div className="font-medium text-white">{m.model}</div><div className="text-sm text-gray-400">{m.capacity_kg}kg | {m.water_consumption_l}L | {m.energy_consumption_kwh}kWh | {m.cycle_duration_min}min</div></div><Button variant="ghost" size="sm" onClick={() => handleDeleteWashingMachine(m.id)} className="text-gray-400 hover:text-red-400"><Trash2 className="w-4 h-4" /></Button></div>))}</div>)}
+                                <div className="flex items-center gap-4">
+                                    <div className="flex-1">
+                                        <Select value={config.washingMachineId || ''} onValueChange={(value) => setConfig(prev => ({ ...prev, washingMachineId: value || null }))}><SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder="Select washing machine" /></SelectTrigger><SelectContent>{washingMachines.map(m => (<SelectItem key={m.id} value={m.id}>{m.model} ({m.capacity_kg}kg)</SelectItem>))}</SelectContent></Select>
+                                    </div>
+                                    <div className="w-48 p-3 bg-cyan/5 border border-cyan/20 rounded-lg">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <Label className="text-gray-400 text-xs">Load %</Label>
+                                            <span className="text-cyan font-bold text-sm">{config.washingLoadPercentage ?? 80}%</span>
+                                        </div>
+                                        <Slider
+                                            value={[config.washingLoadPercentage ?? 80]}
+                                            onValueChange={(vals) => {
+                                                const newVal = vals[0];
+                                                if (typeof newVal === 'number' && !isNaN(newVal)) {
+                                                    setConfig(prev => ({ ...prev, washingLoadPercentage: newVal }));
+                                                }
+                                            }}
+                                            min={10} max={100} step={5}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                             {/* Drying Machines */}
                             <div className="pt-6 border-t border-white/10">
@@ -226,25 +233,32 @@ export default function ConfigurationDialog({
                                                     <div><Label className="text-gray-400">Energy (kWh/cycle)</Label><DoubleInput step="any" value={newDryingMachine.energy_consumption_kwh_per_cycle} onChange={(val) => setNewDryingMachine(prev => ({ ...prev, energy_consumption_kwh_per_cycle: val }))} className="bg-black/20 border-white/10 mt-1" /></div>
                                                     <div><Label className="text-gray-400">Cycle Duration (min)</Label><DoubleInput step="any" value={newDryingMachine.cycle_duration_min} onChange={(val) => setNewDryingMachine(prev => ({ ...prev, cycle_duration_min: val }))} className="bg-black/20 border-white/10 mt-1" /></div>
                                                 </div>
-                                                <div className="p-3 bg-purple/5 border border-purple/10 rounded-lg">
-                                                    <div className="flex justify-between items-center mb-2">
-                                                        <Label className="text-gray-400 text-xs">Average Load Percentage</Label>
-                                                        <span className="text-purple font-bold text-xs">{config.loadPercentage}%</span>
-                                                    </div>
-                                                    <Slider
-                                                        value={[config.loadPercentage]}
-                                                        onValueChange={(vals) => setConfig(prev => ({ ...prev, loadPercentage: vals[0] }))}
-                                                        max={100} step={0.1} className="py-2"
-                                                    />
-                                                </div>
                                             </div>
                                             <DialogFooter><Button onClick={handleAddDryingMachine} className="bg-purple text-white hover:bg-purple/90">Save Machine</Button></DialogFooter>
                                         </DialogContent>
                                     </Dialog>
                                 </div>
-                                <Select value={config.dryingMachineId || ''} onValueChange={(value) => setConfig(prev => ({ ...prev, dryingMachineId: value || null }))}><SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder="Select drying machine" /></SelectTrigger><SelectContent>{dryingMachines.map(m => (<SelectItem key={m.id} value={m.id}>{m.model} ({m.capacity_kg || 10}kg - {m.energy_consumption_kwh_per_cycle}kWh/cycle)</SelectItem>))}</SelectContent></Select>
-
-                                {dryingMachines.length > 0 && (<div className="mt-4 space-y-2">{dryingMachines.map(m => (<div key={m.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg"><div><div className="font-medium text-white">{m.model}</div><div className="text-sm text-gray-400">{m.capacity_kg || 10}kg | {m.energy_consumption_kwh_per_cycle} kWh/cycle | {m.cycle_duration_min || 45}min</div></div><Button variant="ghost" size="sm" onClick={() => handleDeleteDryingMachine(m.id)} className="text-gray-400 hover:text-red-400"><Trash2 className="w-4 h-4" /></Button></div>))}</div>)}
+                                <div className="flex items-center gap-4">
+                                    <div className="flex-1">
+                                        <Select value={config.dryingMachineId || ''} onValueChange={(value) => setConfig(prev => ({ ...prev, dryingMachineId: value || null }))}><SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder="Select drying machine" /></SelectTrigger><SelectContent>{dryingMachines.map(m => (<SelectItem key={m.id} value={m.id}>{m.model} ({m.capacity_kg || 10}kg)</SelectItem>))}</SelectContent></Select>
+                                    </div>
+                                    <div className="w-48 p-3 bg-purple/5 border border-purple/20 rounded-lg">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <Label className="text-gray-400 text-xs">Load %</Label>
+                                            <span className="text-purple font-bold text-sm">{config.dryingLoadPercentage ?? 80}%</span>
+                                        </div>
+                                        <Slider
+                                            value={[config.dryingLoadPercentage ?? 80]}
+                                            onValueChange={(vals) => {
+                                                const newVal = vals[0];
+                                                if (typeof newVal === 'number' && !isNaN(newVal)) {
+                                                    setConfig(prev => ({ ...prev, dryingLoadPercentage: newVal }));
+                                                }
+                                            }}
+                                            min={10} max={100} step={5}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                             {/* Ironing Machines */}
                             <div className="pt-6 border-t border-white/10">
@@ -256,8 +270,7 @@ export default function ConfigurationDialog({
                                             <DialogHeader><DialogTitle>Add Ironing Machine</DialogTitle><DialogDescription>Enter the specifications for your ironing machine.</DialogDescription></DialogHeader>
                                             <div className="space-y-4">
                                                 <div><Label className="text-gray-400">Model Name</Label><Input value={newIroningMachine.model} onChange={(e) => setNewIroningMachine(prev => ({ ...prev, model: e.target.value }))} placeholder="e.g., Miele HM 21-140" className="bg-black/20 border-white/10 mt-1" /></div>
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div><Label className="text-gray-400">Total Ironing Labor Hours</Label><DoubleInput step="any" value={newIroningMachine.ironing_labor_hours} onChange={(val) => setNewIroningMachine(prev => ({ ...prev, ironing_labor_hours: val }))} className="bg-black/20 border-white/10 mt-1" /></div>
+                                                <div className="grid grid-cols-1">
                                                     <div><Label className="text-gray-400">Energy (kWh/hour)</Label><DoubleInput step="any" value={newIroningMachine.energy_consumption_kwh_per_hour} onChange={(val) => setNewIroningMachine(prev => ({ ...prev, energy_consumption_kwh_per_hour: val }))} className="bg-black/20 border-white/10 mt-1" /></div>
                                                 </div>
                                             </div>
@@ -265,8 +278,31 @@ export default function ConfigurationDialog({
                                         </DialogContent>
                                     </Dialog>
                                 </div>
-                                <Select value={config.ironingMachineId || ''} onValueChange={(value) => setConfig(prev => ({ ...prev, ironingMachineId: value || null }))}><SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder="Select ironing machine" /></SelectTrigger><SelectContent>{ironingMachines.map(m => (<SelectItem key={m.id} value={m.id}>{m.model} ({m.ironing_labor_hours} hrs)</SelectItem>))}</SelectContent></Select>
-                                {ironingMachines.length > 0 && (<div className="mt-4 space-y-2">{ironingMachines.map(m => (<div key={m.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg"><div><div className="font-medium text-white">{m.model}</div><div className="text-sm text-gray-400">{m.ironing_labor_hours} hrs | {m.energy_consumption_kwh_per_hour} kWh/hour</div></div><Button variant="ghost" size="sm" onClick={() => actions.deleteIroningMachine(m.id)} className="text-gray-400 hover:text-red-400"><Trash2 className="w-4 h-4" /></Button></div>))}</div>)}
+                                <div className="flex items-center gap-4">
+                                    <div className="flex-1">
+                                        <Select value={config.ironingMachineId || ''} onValueChange={(value) => setConfig(prev => ({ ...prev, ironingMachineId: value || null }))}>
+                                            <SelectTrigger className="bg-black/20 border-white/10">
+                                                <SelectValue placeholder="Select ironing machine" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {ironingMachines.map(m => (<SelectItem key={m.id} value={m.id}>{m.model}</SelectItem>))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="w-32 p-3 bg-amber/5 border border-amber/20 rounded-lg">
+                                        <div className="flex flex-col gap-1.5">
+                                            <Label className="text-gray-400 text-xs text-center">Labor Hrs</Label>
+                                            <div className="relative">
+                                                <DoubleInput
+                                                    value={config.ironingLaborHours ?? 10}
+                                                    onChange={(val) => setConfig(prev => ({ ...prev, ironingLaborHours: val }))}
+                                                    className="bg-black/20 border-white/10 h-8 text-center text-amber font-bold pr-6"
+                                                />
+                                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-amber/60 font-bold">h</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </TabsContent>
 
@@ -279,18 +315,21 @@ export default function ConfigurationDialog({
                                         <DialogHeader><DialogTitle>Add Chemical</DialogTitle><DialogDescription>Enter the details for your laundry chemical.</DialogDescription></DialogHeader>
                                         <div className="space-y-4">
                                             <div><Label className="text-gray-400">Name</Label><Input value={newChemical.name} onChange={(e) => setNewChemical(prev => ({ ...prev, name: e.target.value }))} placeholder="e.g., Premium Detergent" className="bg-black/20 border-white/10 mt-1" /></div>
-                                            <div><Label className="text-gray-400">Type</Label><Select value={newChemical.type} onValueChange={(value) => setNewChemical(prev => ({ ...prev, type: value }))}><SelectTrigger className="bg-black/20 border-white/10 mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="washing_powder">Washing Powder</SelectItem><SelectItem value="stain_remover">Stain Remover</SelectItem><SelectItem value="softener">Fabric Softener</SelectItem><SelectItem value="bleach">Bleach</SelectItem></SelectContent></Select></div>
                                             <div className="grid grid-cols-2 gap-4">
-                                                <div><Label className="text-gray-400">Package Price ({currencySymbol})</Label><DoubleInput step="0.01" value={newChemical.package_price} onChange={(val) => setNewChemical(prev => ({ ...prev, package_price: val }))} className="bg-black/20 border-white/10 mt-1" /></div>
-                                                <div><Label className="text-gray-400">Package Weight (g)</Label><DoubleInput value={newChemical.package_weight_g} onChange={(val) => setNewChemical(prev => ({ ...prev, package_weight_g: val }))} className="bg-black/20 border-white/10 mt-1" /></div>
+                                                <div><Label className="text-gray-400">Type</Label><Select value={newChemical.type} onValueChange={(value) => setNewChemical(prev => ({ ...prev, type: value }))}><SelectTrigger className="bg-black/20 border-white/10 mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="washing_powder">Washing Powder</SelectItem><SelectItem value="stain_remover">Stain Remover</SelectItem><SelectItem value="softener">Fabric Softener</SelectItem><SelectItem value="bleach">Bleach</SelectItem></SelectContent></Select></div>
+                                                <div><Label className="text-gray-400">Measure Unit</Label><Select value={newChemical.unit} onValueChange={(value) => setNewChemical(prev => ({ ...prev, unit: value }))}><SelectTrigger className="bg-black/20 border-white/10 mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="g">Grams (g)</SelectItem><SelectItem value="ml">Milliliters (ml)</SelectItem></SelectContent></Select></div>
                                             </div>
-                                            <div><Label className="text-gray-400">Usage per Cycle (g)</Label><DoubleInput value={newChemical.usage_per_cycle_g} onChange={(val) => setNewChemical(prev => ({ ...prev, usage_per_cycle_g: val }))} className="bg-black/20 border-white/10 mt-1" /></div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div><Label className="text-gray-400">Package Price</Label><div className="relative mt-1"><DoubleInput step="0.01" value={newChemical.package_price} onChange={(val) => setNewChemical(prev => ({ ...prev, package_price: val }))} className="bg-black/20 border-white/10 pr-7" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">{currencySymbol}</span></div></div>
+                                                <div><Label className="text-gray-400">Package Amount</Label><div className="relative mt-1"><DoubleInput value={newChemical.package_amount} onChange={(val) => setNewChemical(prev => ({ ...prev, package_amount: val }))} className="bg-black/20 border-white/10 pr-8" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">{newChemical.unit}</span></div></div>
+                                            </div>
+                                            <div><Label className="text-gray-400">Usage per Cycle</Label><div className="relative mt-1"><DoubleInput value={newChemical.usage_per_cycle} onChange={(val) => setNewChemical(prev => ({ ...prev, usage_per_cycle: val }))} className="bg-black/20 border-white/10 pr-8" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">{newChemical.unit}</span></div></div>
                                         </div>
                                         <DialogFooter><Button onClick={handleAddChemical} className="bg-purple text-white hover:bg-purple/90">Save Chemical</Button></DialogFooter>
                                     </DialogContent>
                                 </Dialog>
                             </div>
-                            {chemicals.length === 0 ? (<div className="text-center py-8 text-gray-500"><FlaskConical className="w-12 h-12 mx-auto mb-3 opacity-30" /><p>No chemicals added yet</p><p className="text-sm">Add chemicals to include them in cost calculation</p></div>) : (<div className="space-y-2">{chemicals.map(chem => { const isSelected = selectedChemicals.includes(chem.id); const costPerCycle = (chem.package_price / chem.package_weight_g) * chem.usage_per_cycle_g; return (<div key={chem.id} className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-all ${isSelected ? 'bg-purple/20 border border-purple/30' : 'bg-white/5 border border-transparent hover:bg-white/10'}`} onClick={() => toggleChemical(chem.id)}><div className="flex items-center gap-3"><div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${isSelected ? 'bg-purple border-purple' : 'border-gray-500'}`}>{isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}</div><div><div className="font-medium text-white">{chem.name}</div><div className="text-sm text-gray-400">{chem.type.replace('_', ' ')} | {currencySymbol}{chem.package_price} / {chem.package_weight_g}g | {chem.usage_per_cycle_g}g/cycle</div><div className="text-xs text-purple mt-1">Cost per cycle: {currencySymbol}{costPerCycle.toFixed(3)}</div></div></div><Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDeleteChemical(chem.id); }} className="text-gray-400 hover:text-red-400"><Trash2 className="w-4 h-4" /></Button></div>); })}</div>)}
+                            {chemicals.length === 0 ? (<div className="text-center py-8 text-gray-500"><FlaskConical className="w-12 h-12 mx-auto mb-3 opacity-30" /><p>No chemicals added yet</p><p className="text-sm">Add chemicals to include them in cost calculation</p></div>) : (<div className="space-y-2">{chemicals.map(chem => { const isSelected = selectedChemicals.includes(chem.id); const costPerCycle = (chem.package_price / (chem.package_amount || 1)) * (chem.usage_per_cycle || 0); return (<div key={chem.id} className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-all ${isSelected ? 'bg-purple/20 border border-purple/30' : 'bg-white/5 border border-transparent hover:bg-white/10'}`} onClick={() => toggleChemical(chem.id)}><div className="flex items-center gap-3"><div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${isSelected ? 'bg-purple border-purple' : 'border-gray-500'}`}>{isSelected && <div className="w-2 h-2 bg-white rounded-sm" />}</div><div><div className="font-medium text-white">{chem.name}</div><div className="text-sm text-gray-400">{chem.type.replace('_', ' ')} | {currencySymbol}{chem.package_price} / {chem.package_amount}{chem.unit || 'g'} | {chem.usage_per_cycle}{chem.unit || 'g'}/cycle</div><div className="text-xs text-purple mt-1">Cost per cycle: {currencySymbol}{costPerCycle.toFixed(3)}</div></div></div><Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDeleteChemical(chem.id); }} className="text-gray-400 hover:text-red-400"><Trash2 className="w-4 h-4" /></Button></div>); })}</div>)}
                         </TabsContent>
                     </Tabs>
 

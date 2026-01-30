@@ -1,16 +1,9 @@
+// ... (imports remain same)
 import React, { useState } from 'react';
 import { Zap, Droplets, FlaskConical, Clock, Settings } from 'lucide-react';
 
 /**
  * StatsGrid Component
- * 
- * Displays a grid of stat cards showing electricity, water, chemicals, and labor metrics.
- * Includes a time frame selector (Week/Month/Year) to adjust the displayed values.
- * 
- * @param {Object} props
- * @param {Object} props.costData - Cost calculation data from API
- * @param {string} props.currencySymbol - Currency symbol (€, Kč, etc.)
- * @param {number} props.selectedChemicalsCount - Number of selected chemicals
  */
 export default function StatsGrid({
     costData,
@@ -42,10 +35,9 @@ export default function StatsGrid({
     const prefix = getPrefix();
 
     return (
-        <div className="glass-card p-3 h-full">
-            {/* Header with Time Frame Selector */}
+        <div className="glass-card p-4 h-full flex flex-col">
+            {/* Header */}
             <div className="flex items-center justify-between mb-4">
-                {/* Time Frame Selector Tabs */}
                 <div className="inline-flex bg-white/5 p-1 rounded-lg">
                     {['week', 'month', 'year'].map((tf) => (
                         <button
@@ -65,9 +57,8 @@ export default function StatsGrid({
                 </div>
             </div>
 
-            {/* Stats Cards Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pb-2">
-                {/* Electricity Card */}
+            {/* Stats Cards Grid - 2 rows on mobile, 1 row on desktop if possible, or wrap */}
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 flex-1">
                 <StatCard
                     icon={<Zap className="w-4 h-4" />}
                     iconColor="text-yellow-400"
@@ -78,7 +69,6 @@ export default function StatsGrid({
                     subValue={`${currencySymbol}${costData ? (costData.monthly_electricity_cost * multiplier).toFixed(2) : '0'}`}
                 />
 
-                {/* Water Card */}
                 <StatCard
                     icon={<Droplets className="w-4 h-4" />}
                     iconColor="text-blue-400"
@@ -89,7 +79,6 @@ export default function StatsGrid({
                     subValue={`${currencySymbol}${costData ? (costData.monthly_water_cost * multiplier).toFixed(2) : '0'}`}
                 />
 
-                {/* Chemicals Card */}
                 <StatCard
                     icon={<FlaskConical className="w-4 h-4" />}
                     iconColor="text-purple"
@@ -100,7 +89,6 @@ export default function StatsGrid({
                     subValue={`${selectedChemicalsCount} types`}
                 />
 
-                {/* Labor Hours Card */}
                 <StatCard
                     icon={<Clock className="w-4 h-4" />}
                     iconColor="text-amber"
@@ -111,7 +99,6 @@ export default function StatsGrid({
                     subValue={`${currencySymbol}${costData ? (costData.monthly_labor_cost * multiplier).toFixed(2) : '0'}`}
                 />
 
-                {/* Ironing Hours Card */}
                 <StatCard
                     icon={<Settings className="w-4 h-4" />}
                     iconColor="text-orange-400"
@@ -126,38 +113,29 @@ export default function StatsGrid({
     );
 }
 
-/**
- * StatCard Component
- * 
- * Individual stat card showing an icon, label, value, unit, and sub-value.
- * 
- * @param {Object} props
- * @param {React.ReactNode} props.icon - Icon element
- * @param {string} props.iconColor - Tailwind color class for icon
- * @param {string} props.bgColor - Tailwind background color class
- * @param {string} props.label - Card label
- * @param {string|number} props.value - Main value to display
- * @param {string} props.unit - Unit suffix for value
- * @param {string} props.subValue - Secondary value below main value
- */
 function StatCard({ icon, iconColor, bgColor, label, value, unit, subValue }) {
     return (
-        <div
-            className="glass-card p-3 glass-card-hover relative overflow-hidden"
-            data-testid={`stat-card-${label.toLowerCase().replace(/\s+/g, '-')}`}
-        >
-            <div className={`absolute top-2 right-2 w-6 h-6 rounded-md ${bgColor} flex items-center justify-center`}>
-                <span className={iconColor}>{React.cloneElement(icon, { className: "w-3.5 h-3.5" })}</span>
+        <div className="glass-card p-3.5 flex flex-col justify-between h-full hover:bg-white/5 transition-colors group">
+            <div className="flex justify-between items-start mb-2">
+                <span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold leading-tight max-w-[70%]">
+                    {label}
+                </span>
+                <div className={`p-1.5 rounded-md ${bgColor} group-hover:bg-opacity-80 transition-all`}>
+                    <span className={iconColor}>{icon}</span>
+                </div>
             </div>
-            <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-0.5">{label}</div>
-            <div className="flex items-baseline gap-0.5 mt-1">
-                <span className="stat-number text-xl font-bold text-white tracking-tight">{value}</span>
-                {unit && <span className="text-[10px] text-gray-500 font-medium">{unit}</span>}
+
+            <div className="mt-auto">
+                <div className="flex items-baseline gap-1">
+                    <span className="text-xl font-bold text-white tracking-tight leading-none">{value}</span>
+                    {unit && <span className="text-[10px] text-gray-500 font-medium">{unit}</span>}
+                </div>
+                <div className="text-[10px] text-gray-500 mt-1 font-medium bg-white/5 inline-block px-1.5 py-0.5 rounded border border-white/5 border-t-white/10">
+                    {subValue}
+                </div>
             </div>
-            <div className="text-[10px] text-gray-500 mt-0.5 font-medium opacity-80">{subValue}</div>
         </div>
     );
 }
 
-// Export StatCard for potential reuse
 export { StatCard };

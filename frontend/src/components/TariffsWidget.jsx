@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, MapPin, Zap, Calendar, Sliders } from 'lucide-react';
+import { Settings, MapPin, Calendar, Sliders } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -15,15 +15,25 @@ export default function TariffsWidget({ config, locationName, onOpenConfig }) {
                 <Sliders className="w-20 h-20 text-white" />
             </div>
 
-            {/* Header - Keep only the left gear icon and title */}
-            <div className="flex items-center gap-2 mb-4 relative z-10">
-                <Settings className="w-4 h-4 text-gray-400" />
-                <span className="text-xs text-gray-400 uppercase tracking-wider font-bold">
-                    Configuration
-                </span>
+            {/* Header with Modify button */}
+            <div className="flex items-center justify-between mb-4 relative z-10">
+                <div className="flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-gray-400" />
+                    <span className="text-xs text-gray-400 uppercase tracking-wider font-bold">
+                        Configuration
+                    </span>
+                </div>
+                <Button
+                    onClick={onOpenConfig}
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-cyan hover:text-cyan/80 hover:bg-cyan/10 border border-cyan/20 px-3"
+                >
+                    Modify <Sliders className="w-3 h-3 ml-1.5" />
+                </Button>
             </div>
 
-            {/* Content - Three separate styled widgets */}
+            {/* Content - Three separate styled widgets (Original Design) */}
             <div className="grid grid-cols-3 gap-3 flex-1 relative z-10">
                 {/* Active Profile Widget */}
                 <div className="bg-white/5 border border-white/10 rounded-lg p-3 flex flex-col">
@@ -61,16 +71,6 @@ export default function TariffsWidget({ config, locationName, onOpenConfig }) {
                         </span>
                     </div>
                 </div>
-            </div>
-
-            {/* Action Button */}
-            <div className="mt-3 relative z-10">
-                <Button
-                    onClick={onOpenConfig}
-                    className="w-full h-8 text-xs bg-cyan/10 hover:bg-cyan/20 text-cyan border border-cyan/20"
-                >
-                    Modify Settings
-                </Button>
             </div>
         </div>
     );
