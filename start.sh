@@ -1,13 +1,14 @@
 #!/bin/bash
 
 # Laundry Digital Twin - Management Script
-# Usage: ./start.sh [start|stop|status|restart]
+# Usage: ./start.sh [setup|start|stop|status|restart|dev|clean]
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Get the directory where the script is located
@@ -15,6 +16,92 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$SCRIPT_DIR/backend"
 FRONTEND_DIR="$SCRIPT_DIR/frontend"
 PID_FILE="$SCRIPT_DIR/.services.pid"
+
+# Function to setup/install all dependencies
+setup() {
+    echo -e "${CYAN}╔════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║     Laundry Digital Twin - Dependency Setup            ║${NC}"
+    echo -e "${CYAN}╚════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+
+    # Backend Setup
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${YELLOW}[1/2] Setting up Backend (Python)...${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    
+    cd "$BACKEND_DIR"
+    
+    # Check if Python3 is installed
+    if ! command -v python3 &> /dev/null; then
+        echo -e "${RED}✗ Python3 is not installed. Please install Python 3.8+ first.${NC}"
+        exit 1
+    fi
+    
+    # Create virtual environment if it doesn't exist
+    if [ ! -d ".venv" ]; then
+        echo -e "${BLUE}  → Creating Python virtual environment...${NC}"
+        python3 -m venv .venv
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}✗ Failed to create virtual environment${NC}"
+            exit 1
+        fi
+        echo -e "${GREEN}  ✓ Virtual environment created${NC}"
+    else
+        echo -e "${GREEN}  ✓ Virtual environment already exists${NC}"
+    fi
+    
+    # Activate and install dependencies
+    echo -e "${BLUE}  → Installing Python dependencies...${NC}"
+    source .venv/bin/activate
+    pip install --upgrade pip -q
+    pip install -r requirements.txt -q
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}✗ Failed to install Python dependencies${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}  ✓ Backend dependencies installed${NC}"
+    deactivate
+    
+    echo ""
+    
+    # Frontend Setup
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${YELLOW}[2/2] Setting up Frontend (Node.js)...${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    
+    cd "$FRONTEND_DIR"
+    
+    # Check if Node.js is installed
+    if ! command -v node &> /dev/null; then
+        echo -e "${RED}✗ Node.js is not installed. Please install Node.js 18+ first.${NC}"
+        exit 1
+    fi
+    
+    # Check if yarn is installed
+    if ! command -v yarn &> /dev/null; then
+        echo -e "${YELLOW}  → Yarn not found, installing globally...${NC}"
+        npm install -g yarn
+    fi
+    
+    # Install frontend dependencies
+    echo -e "${BLUE}  → Installing Node.js dependencies (this may take a moment)...${NC}"
+    yarn install --silent
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}✗ Failed to install frontend dependencies${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}  ✓ Frontend dependencies installed${NC}"
+    
+    echo ""
+    echo -e "${CYAN}╔════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║  ✓ Setup complete! All dependencies installed.        ║${NC}"
+    echo -e "${CYAN}╚════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "${BLUE}Next steps:${NC}"
+    echo -e "  ${YELLOW}./start.sh start${NC}   - Start both services"
+    echo -e "  ${YELLOW}./start.sh dev${NC}     - Setup + Start (one command)"
+    echo ""
+}
 
 # Function to show status
 status() {
@@ -127,6 +214,9 @@ clean() {
 
 # Handle arguments
 case "$1" in
+    setup)
+        setup
+        ;;
     start)
         start
         ;;
@@ -144,22 +234,33 @@ case "$1" in
     clean)
         clean
         ;;
-    *)
-        echo -e "${BLUE}Usage: $0 {start|stop|status|restart|clean}${NC}"
-        echo -e "Starting services in interactive mode (current behavior)..."
-        
-        # Interactive mode logic (Cleanup on Ctrl+C)
-        cleanup() {
-            echo -e "\n${YELLOW}Shutting down...${NC}"
-            stop
-            exit 0
-        }
-        trap cleanup SIGINT SIGTERM
-        
-        # Start processes and wait
+    dev)
+        # Combined: setup + start
+        echo -e "${CYAN}Running full development setup...${NC}"
+        setup
+        echo ""
         start
-        echo -e "${YELLOW}Running in interactive mode. Press Ctrl+C to stop.${NC}"
-        # Tail logs or wait
-        wait
+        ;;
+    *)
+        echo -e "${CYAN}╔════════════════════════════════════════════════════════╗${NC}"
+        echo -e "${CYAN}║     Laundry Digital Twin - Management Script           ║${NC}"
+        echo -e "${CYAN}╚════════════════════════════════════════════════════════╝${NC}"
+        echo ""
+        echo -e "${BLUE}Usage:${NC} $0 {command}"
+        echo ""
+        echo -e "${YELLOW}Commands:${NC}"
+        echo -e "  ${GREEN}setup${NC}    - Install all dependencies (backend + frontend)"
+        echo -e "  ${GREEN}start${NC}    - Start both services"
+        echo -e "  ${GREEN}stop${NC}     - Stop all services"
+        echo -e "  ${GREEN}status${NC}   - Check service status"
+        echo -e "  ${GREEN}restart${NC}  - Restart all services"
+        echo -e "  ${GREEN}clean${NC}    - Remove database file"
+        echo -e "  ${GREEN}dev${NC}      - Setup + Start (recommended for first run)"
+        echo ""
+        echo -e "${BLUE}Examples:${NC}"
+        echo -e "  ${YELLOW}./start.sh dev${NC}      # First time setup and start"
+        echo -e "  ${YELLOW}./start.sh start${NC}    # Start after setup"
+        echo -e "  ${YELLOW}./start.sh stop${NC}     # Stop all services"
+        echo ""
         ;;
 esac

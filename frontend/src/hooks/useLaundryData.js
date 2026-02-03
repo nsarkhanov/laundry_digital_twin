@@ -169,6 +169,7 @@ export function useLaundryData() {
         ironingMachines,
         chemicals,
         isLoading,
+        refetch: fetchAllData,
         actions: {
             addLocation, deleteLocation,
             addWashingMachine, deleteWashingMachine,

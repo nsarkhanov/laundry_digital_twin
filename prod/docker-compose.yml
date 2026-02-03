@@ -1,0 +1,61 @@
+# ============================================
+# Docker Compose - Laundry Digital Twin
+# Production Deployment
+# ============================================
+# Run from this directory: docker compose up --build
+
+services:
+  # -------------------- Backend Service --------------------
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: laundry-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist SQLite database
+      - laundry_data:/app/data
+      - ../backend/laundry.db:/app/laundry.db
+    environment:
+      - DATABASE_URL=/app/laundry.db
+      - ALLOWED_ORIGINS=http://localhost,http://localhost:80,http://127.0.0.1,http://127.0.0.1:80
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - laundry-network
+
+  # -------------------- Frontend Service --------------------
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: laundry-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:80/index.html" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - laundry-network
+
+# -------------------- Volumes --------------------
+volumes:
+  laundry_data:
+    driver: local
+
+# -------------------- Networks --------------------
+networks:
+  laundry-network:
+    driver: bridge

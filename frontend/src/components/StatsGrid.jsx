@@ -1,4 +1,3 @@
-// ... (imports remain same)
 import React, { useState } from 'react';
 import { Zap, Droplets, FlaskConical, Clock, Settings } from 'lucide-react';
 
