@@ -46,7 +46,15 @@ class CostCalculatorService:
             
             monthly_water_m3 = water_per_cycle_m3 * cycles
             monthly_washing_kwh = energy_per_cycle_kwh * cycles
+        
+        # Use operational_volume if provided, otherwise calculate from machine capacity
+        if data.operational_volume > 0:
+            total_kg_processed = data.operational_volume
+        elif washing_machine:
+            effective_capacity = washing_machine['capacity_kg'] * (data.washing_load_percentage / 100)
             total_kg_processed = effective_capacity * cycles
+        else:
+            total_kg_processed = 0.0
         
         # Drying calculations
         monthly_drying_kwh = 0.0

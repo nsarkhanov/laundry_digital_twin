@@ -210,6 +210,13 @@ export default function LaundryDashboard() {
         ironing_machine_id: config.ironingMachineId,
         ironing_labor_hours: config.ironingLaborHours,
         chemical_ids: selectedChemicals,
+        // Operational volume (convert to monthly based on period)
+        operational_volume: (() => {
+          let multiplier = 1;
+          if (config.operationalPeriod === 'day') multiplier = 30;
+          if (config.operationalPeriod === 'week') multiplier = 4.33;
+          return config.operationalVolume * multiplier;
+        })(),
         // Transport settings
         transport_enabled: config.transportEnabled,
         transport_mode: config.transportMode,

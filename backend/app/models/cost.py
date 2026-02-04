@@ -25,6 +25,8 @@ class CostCalculationRequest(BaseModel):
     drying_machine_id: Optional[str] = None
     ironing_machine_id: Optional[str] = None
     chemical_ids: List[str] = []
+    # Operational volume (kg per month) - used as total weight
+    operational_volume: float = 0.0
     # Transport settings
     transport_enabled: bool = False
     transport_mode: str = "fixed"
