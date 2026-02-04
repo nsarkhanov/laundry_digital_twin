@@ -14,8 +14,8 @@ load_dotenv(ROOT_DIR / '.env')
 class Settings:
     """Application settings loaded from environment variables."""
     
-    # Database
-    DB_PATH: Path = ROOT_DIR / 'laundry.db'
+    # Database - supports Render's persistent disk via DATABASE_PATH env var
+    DB_PATH: Path = Path(os.getenv("DATABASE_PATH", str(ROOT_DIR / 'laundry.db')))
     
     # CORS
     ALLOWED_ORIGINS: list[str] = os.getenv(

@@ -158,9 +158,9 @@ class CostCalculatorService:
     def _get_season_multiplier(season: str) -> float:
         """Get cost multiplier based on season."""
         if season == "winter":
-            return 1  # 15% higher in winter
+            return 1.0  # Currently no seasonal variation (update after collecting real data)
         elif season == "summer":
-            return 1  # 5% lower in summer
+            return 1.0  # Currently no seasonal variation (update after collecting real data)
         return 1.0
     
     @staticmethod

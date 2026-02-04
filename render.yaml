@@ -1,0 +1,39 @@
+# ============================================
+# Render Blueprint - Laundry Digital Twin
+# ============================================
+# This file configures automatic deployment on Render.com
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  # -------------------- Backend Service --------------------
+  - type: web
+    name: laundry-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_PATH
+        value: /data/laundry.db
+      - key: ALLOWED_ORIGINS
+        sync: false  # Set manually after frontend deploys
+    disk:
+      name: laundry-data
+      mountPath: /data
+      sizeGB: 1
+    healthCheckPath: /api/health
+
+  # -------------------- Frontend Service --------------------
+  - type: web
+    name: laundry-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: yarn install && yarn build
+    staticPublishPath: build
+    envVars:
+      - key: REACT_APP_BACKEND_URL
+        sync: false  # Set manually - backend URL after it deploys
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
